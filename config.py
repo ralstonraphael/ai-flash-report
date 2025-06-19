@@ -1,0 +1,16 @@
+# config.py
+
+# === VECTORSTORE SETTINGS ===
+VECTORSTORE_PATH = "vectorstores"
+
+# === CHUNKING SETTINGS ===
+CHUNK_SIZE = 800
+CHUNK_OVERLAP = 100
+
+# === DEFAULT MODEL SETTINGS ===
+EMBEDDING_MODEL = "text-embedding-ada-002"
+GPT_MODEL = "gpt-4"
+
+# === DEBUG / LOGGING ===
+LOG_CHUNK_PREVIEWS = True
+LOG_PDF_UPLOADS = True
