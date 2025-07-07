@@ -1,244 +1,298 @@
 """
-DOCX report generator module with styling and template support.
+DOCX report generator module with Norstella styling and one-page limit.
 """
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Tuple, Union
 import datetime
 import re
+import io
+import logging
 
 from docx import Document
-from docx.shared import Pt, RGBColor, Inches
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
+from docx.shared import Pt, RGBColor, Inches, Cm
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING, WD_BREAK
 from docx.enum.style import WD_STYLE_TYPE
-from docx.shared import Cm
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+from docx.shared import Twips
+from docx.shared import Length
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 from src.config import TEMPLATE_PATH
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class ChartType:
+    """Supported chart types."""
+    BAR = "bar"
+    LINE = "line"
+    PIE = "pie"
+    STACKED_BAR = "stacked_bar"
+    HORIZONTAL_BAR = "horizontal_bar"
 
 class ReportGenerator:
-    """Generates formatted DOCX reports with consistent styling."""
+    """Generates formatted one-page DOCX reports with Norstella styling."""
+    
+    NORSTELLA_BLUE = RGBColor(31, 73, 125)  # Primary brand color
+    NORSTELLA_GRAY = RGBColor(68, 84, 106)  # Secondary color
+    
+    # Page size constants (in inches)
+    PAGE_WIDTH = 8.5
+    PAGE_HEIGHT = 11.0
+    MARGIN = 1.0
+    CONTENT_WIDTH = PAGE_WIDTH - (2 * MARGIN)
+    CONTENT_HEIGHT = PAGE_HEIGHT - (2 * MARGIN)
     
     def __init__(self, template_path: Optional[str] = None):
-        """
-        Initialize report generator with optional template.
-        
-        Args:
-            template_path: Path to DOCX template file (optional)
-        """
-        self.template_path = template_path or TEMPLATE_PATH
-        
-        # Initialize document
-        if template_path and Path(template_path).exists():
-            self.doc = Document(template_path)
-        else:
-            self.doc = Document()
-            self._setup_default_styles()
+        """Initialize report generator."""
+        self.doc = Document()
+        self._setup_norstella_styles()
+        self._setup_page_layout()
+        self.content_height = 0  # Track content height
 
-    def _setup_default_styles(self):
-        """Set up default document styles."""
-        # Page margins
-        sections = self.doc.sections
-        for section in sections:
-            section.top_margin = Cm(2.54)
-            section.bottom_margin = Cm(2.54)
-            section.left_margin = Cm(2.54)
-            section.right_margin = Cm(2.54)
-        
-        # Title style
-        title_style = self.doc.styles.add_style('CustomTitle', WD_STYLE_TYPE.PARAGRAPH)
-        title_style.font.name = 'Calibri'
-        title_style.font.size = Pt(28)
+    def _setup_page_layout(self):
+        """Set up page layout for one-page format."""
+        section = self.doc.sections[0]
+        section.page_height = Inches(self.PAGE_HEIGHT)
+        section.page_width = Inches(self.PAGE_WIDTH)
+        section.left_margin = Inches(self.MARGIN)
+        section.right_margin = Inches(self.MARGIN)
+        section.top_margin = Inches(self.MARGIN)
+        section.bottom_margin = Inches(self.MARGIN)
+
+    def _setup_norstella_styles(self):
+        """Set up document styles for one-page format."""
+        # Title style (smaller than before)
+        title_style = self.doc.styles.add_style('NorstTitle', WD_STYLE_TYPE.PARAGRAPH)
+        title_style.font.name = 'Segoe UI'
+        title_style.font.size = Pt(18)  # Reduced from 24
         title_style.font.bold = True
-        title_style.font.color.rgb = RGBColor(31, 73, 125)  # Dark blue
-        title_style.paragraph_format.space_before = Pt(0)
-        title_style.paragraph_format.space_after = Pt(20)
-        title_style.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+        title_style.font.color.rgb = self.NORSTELLA_BLUE
+        title_style.paragraph_format.space_before = Pt(12)
+        title_style.paragraph_format.space_after = Pt(6)
+        title_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
         
-        # Heading styles
-        for i, size in enumerate([20, 16, 14], 1):
-            heading_style = self.doc.styles.add_style(f'CustomHeading{i}', WD_STYLE_TYPE.PARAGRAPH)
-            heading_style.font.name = 'Calibri'
-            heading_style.font.size = Pt(size)
-            heading_style.font.bold = True
-            heading_style.font.color.rgb = RGBColor(68, 84, 106)  # Slate gray
-            heading_style.paragraph_format.space_before = Pt(20)
-            heading_style.paragraph_format.space_after = Pt(12)
-            heading_style.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
-            heading_style.paragraph_format.keep_with_next = True
+        # Subtitle style (smaller)
+        subtitle_style = self.doc.styles.add_style('NorstSubtitle', WD_STYLE_TYPE.PARAGRAPH)
+        subtitle_style.font.name = 'Segoe UI'
+        subtitle_style.font.size = Pt(12)  # Reduced from 16
+        subtitle_style.font.color.rgb = self.NORSTELLA_GRAY
+        subtitle_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        subtitle_style.paragraph_format.space_after = Pt(12)
         
-        # Body style
-        body_style = self.doc.styles.add_style('CustomBody', WD_STYLE_TYPE.PARAGRAPH)
+        # Section header style (smaller)
+        header_style = self.doc.styles.add_style('NorstHeader', WD_STYLE_TYPE.PARAGRAPH)
+        header_style.font.name = 'Segoe UI'
+        header_style.font.size = Pt(11)  # Reduced from 14
+        header_style.font.bold = True
+        header_style.font.color.rgb = self.NORSTELLA_BLUE
+        header_style.paragraph_format.space_before = Pt(6)
+        header_style.paragraph_format.space_after = Pt(3)
+        
+        # Body style (compact)
+        body_style = self.doc.styles.add_style('NorstBody', WD_STYLE_TYPE.PARAGRAPH)
         body_style.font.name = 'Calibri'
-        body_style.font.size = Pt(11)
-        body_style.paragraph_format.space_before = Pt(6)
-        body_style.paragraph_format.space_after = Pt(6)
-        body_style.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+        body_style.font.size = Pt(10)  # Reduced from 11
+        body_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        body_style.paragraph_format.line_spacing = 1.0  # Single spacing
+        body_style.paragraph_format.space_after = Pt(3)
         
-        # List style
-        list_style = self.doc.styles.add_style('CustomList', WD_STYLE_TYPE.PARAGRAPH)
+        # List style (compact)
+        list_style = self.doc.styles.add_style('NorstList', WD_STYLE_TYPE.PARAGRAPH)
         list_style.font.name = 'Calibri'
-        list_style.font.size = Pt(11)
-        list_style.paragraph_format.space_before = Pt(3)
-        list_style.paragraph_format.space_after = Pt(3)
-        list_style.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
-        list_style.paragraph_format.left_indent = Inches(0.25)
-        
-        # Quote style
-        quote_style = self.doc.styles.add_style('CustomQuote', WD_STYLE_TYPE.PARAGRAPH)
-        quote_style.font.name = 'Calibri'
-        quote_style.font.italic = True
-        quote_style.font.size = Pt(11)
-        quote_style.font.color.rgb = RGBColor(89, 89, 89)  # Dark gray
-        quote_style.paragraph_format.left_indent = Inches(0.5)
-        quote_style.paragraph_format.space_before = Pt(12)
-        quote_style.paragraph_format.space_after = Pt(12)
-        quote_style.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+        list_style.font.size = Pt(10)
+        list_style.paragraph_format.line_spacing = 1.0
+        list_style.paragraph_format.left_indent = Inches(0.15)
+        list_style.paragraph_format.space_after = Pt(2)
 
-    def _clean_markdown(self, text: str) -> str:
-        """Remove markdown formatting from text."""
-        # Remove headers
-        text = re.sub(r'#+\s+', '', text)
-        # Remove bold/italic
-        text = re.sub(r'\*\*?(.*?)\*\*?', r'\1', text)
-        # Remove inline code
-        text = re.sub(r'`([^`]+)`', r'\1', text)
-        # Remove links
-        text = re.sub(r'\[(.*?)\]\(.*?\)', r'\1', text)
-        # Remove blockquotes
-        text = re.sub(r'>\s+', '', text)
-        # Clean up extra whitespace
-        text = re.sub(r'\n\s*\n', '\n\n', text)
-        text = text.strip()
-        return text
-
-    def add_title_page(self, title: str, subtitle: Optional[str] = None,
-                      logo_path: Optional[str] = None):
+    def add_section(self, title: str, content: str, max_length: Optional[int] = None):
         """
-        Add a formatted title page to the document.
-        
-        Args:
-            title: Report title
-            subtitle: Optional subtitle
-            logo_path: Optional path to logo image
-        """
-        # Add logo if provided
-        if logo_path and Path(logo_path).exists():
-            self.doc.add_picture(logo_path, width=Inches(2.5))
-            self.doc.add_paragraph()  # Spacing
-        
-        # Add title
-        title_para = self.doc.add_paragraph(title, style='CustomTitle')
-        title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        
-        # Add subtitle if provided
-        if subtitle:
-            subtitle_para = self.doc.add_paragraph(subtitle, style='CustomHeading2')
-            subtitle_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        
-        # Add date
-        date_para = self.doc.add_paragraph(
-            datetime.datetime.now().strftime("%B %d, %Y"),
-            style='CustomBody'
-        )
-        date_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        
-        # Add page break
-        self.doc.add_page_break()
-
-    def add_section(self, title: str, content: str, level: int = 1):
-        """
-        Add a new section with heading and content.
+        Add a section with length control.
         
         Args:
             title: Section title
             content: Section content text
-            level: Heading level (1-3)
+            max_length: Maximum number of characters (optional)
         """
-        # Add heading
-        self.doc.add_paragraph(title, style=f'CustomHeading{level}')
+        # Add section header
+        header = self.doc.add_paragraph(title, style='NorstHeader')
         
-        # Clean and process content
-        content = self._clean_markdown(content)
+        # Truncate content if needed
+        if max_length and len(content) > max_length:
+            content = content[:max_length-3] + "..."
         
-        # Split into paragraphs and add
+        # Process and add content
         paragraphs = content.split('\n\n')
         for para in paragraphs:
-            # Check if it's a list item
-            if para.strip().startswith('•') or para.strip().startswith('-'):
-                p = self.doc.add_paragraph(style='CustomList')
-                p.add_run(para.strip()[2:].strip())
+            if para.strip().startswith(('•', '-', '*')):
+                # Handle bullet points
+                p = self.doc.add_paragraph(style='NorstList')
+                p.add_run('• ' + para.strip()[1:].strip())
             else:
-                self.doc.add_paragraph(para, style='CustomBody')
+                # Regular paragraph
+                self.doc.add_paragraph(para, style='NorstBody')
 
-    def add_insights(self, insights: Dict[str, Any]):
+    def add_cover_page(self, title: str, subtitle: Optional[str] = None,
+                      logo_path: Optional[str] = None):
+        """Add a compact cover section."""
+        if logo_path and Path(logo_path).exists():
+            self.doc.add_picture(logo_path, width=Inches(1.5))  # Smaller logo
+        
+        title_para = self.doc.add_paragraph(title, style='NorstTitle')
+        
+        if subtitle:
+            subtitle_para = self.doc.add_paragraph(subtitle, style='NorstSubtitle')
+
+    def add_chart(self, chart_data: Dict[str, Any], chart_type: str = ChartType.BAR,
+                 title: Optional[str] = None, caption: Optional[str] = None,
+                 width: float = 6, height: float = 4, new_page: bool = False):
         """
-        Add an insights section with key findings.
+        Add a chart to the document.
         
         Args:
-            insights: Dictionary of insight categories and their content
+            chart_data: Dictionary containing chart data and configuration
+            chart_type: Type of chart to create (bar, line, pie, etc.)
+            title: Chart title
+            caption: Chart caption or description
+            width: Chart width in inches
+            height: Chart height in inches
+            new_page: Whether to place chart on a new page
         """
-        self.doc.add_paragraph("Key Insights", style='CustomHeading1')
+        if new_page:
+            self.doc.add_page_break()
         
-        for category, items in insights.items():
-            # Add category heading
-            self.doc.add_paragraph(category, style='CustomHeading2')
+        # Create figure with Norstella styling
+        plt.style.use('seaborn')
+        fig, ax = plt.subplots(figsize=(width, height))
+        
+        # Set Norstella colors
+        colors = ['#1F497D', '#445A6A', '#0070C0', '#595959']
+        
+        # Create chart based on type
+        if chart_type == ChartType.BAR:
+            ax.bar(chart_data['x'], chart_data['y'], color=colors[0])
+        elif chart_type == ChartType.LINE:
+            ax.plot(chart_data['x'], chart_data['y'], color=colors[0], linewidth=2, marker='o')
+        elif chart_type == ChartType.PIE:
+            ax.pie(chart_data['values'], labels=chart_data['labels'], colors=colors,
+                  autopct='%1.1f%%', startangle=90)
+        elif chart_type == ChartType.STACKED_BAR:
+            bottom = np.zeros(len(chart_data['x']))
+            for i, y in enumerate(chart_data['y_series']):
+                ax.bar(chart_data['x'], y, bottom=bottom, color=colors[i % len(colors)],
+                      label=chart_data['series_labels'][i])
+                bottom += y
+            ax.legend()
+        elif chart_type == ChartType.HORIZONTAL_BAR:
+            ax.barh(chart_data['y'], chart_data['x'], color=colors[0])
+        
+        # Style the chart
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        if chart_type != ChartType.PIE:
+            ax.grid(True, linestyle='--', alpha=0.7)
+        
+        # Save chart to memory
+        img_stream = io.BytesIO()
+        plt.savefig(img_stream, format='png', dpi=300, bbox_inches='tight')
+        img_stream.seek(0)
+        plt.close()
+        
+        # Add title if provided
+        if title:
+            self.doc.add_paragraph(title, style='NorstChartTitle')
+        
+        # Add chart to document
+        self.doc.add_picture(img_stream, width=Inches(width))
+        
+        # Add caption if provided
+        if caption:
+            self.doc.add_paragraph(caption, style='NorstChartCaption')
+        
+        if new_page:
+            self.doc.add_page_break()
+
+    def add_chart_from_file(self, image_path: str, title: Optional[str] = None,
+                          caption: Optional[str] = None, width: float = 6.0):
+        """
+        Add a chart from an image file to the document.
+        
+        Args:
+            image_path: Path to the image file
+            title: Optional title to display above the chart
+            caption: Optional caption to display below the chart
+            width: Width of the chart in inches
+        """
+        if title:
+            title_para = self.doc.add_paragraph(title, style='NorstChartTitle')
+        
+        # Add the image
+        self.doc.add_picture(image_path, width=Inches(width))
+        
+        if caption:
+            caption_para = self.doc.add_paragraph(caption, style='NorstChartCaption')
+        
+        # Add some space after the chart
+        self.doc.add_paragraph()
+
+    def _clean_markdown(self, text: str) -> str:
+        """Process markdown-style formatting in text."""
+        # Remove headers
+        text = re.sub(r'#+\s+', '', text)
+        
+        # Handle bold text
+        text = re.sub(r'\*\*(.*?)\*\*', lambda m: self._make_bold(m.group(1)), text)
+        
+        # Handle italic text
+        text = re.sub(r'\*(.*?)\*', lambda m: self._make_italic(m.group(1)), text)
+        
+        # Clean up whitespace
+        text = re.sub(r'\n\s*\n', '\n\n', text)
+        text = text.strip()
+        return text
+
+    def _make_bold(self, text: str) -> str:
+        """Mark text for bold formatting."""
+        return f'<b>{text}</b>'
+
+    def _make_italic(self, text: str) -> str:
+        """Mark text for italic formatting."""
+        return f'<i>{text}</i>'
+
+    def save(self, filename: str):
+        """
+        Save the document with page limit check.
+        
+        Args:
+            filename: Output filename
+        """
+        # Count pages before saving
+        self.doc.save(filename)
+        doc = Document(filename)
+        
+        if len(doc.sections) > 1:
+            # Document is too long, need to truncate
+            logging.warning("Document exceeds one page, truncating content...")
+            self.doc = Document()
+            self._setup_norstella_styles()
+            self._setup_page_layout()
             
-            # Add items as bullet points
-            for item in items:
-                p = self.doc.add_paragraph(style='CustomList')
-                p.add_run("• " + self._clean_markdown(item))
-
-    def add_metrics_table(self, metrics: Dict[str, Any]):
-        """
-        Add a table of metrics or KPIs.
-        
-        Args:
-            metrics: Dictionary of metric names and values
-        """
-        # Add heading
-        self.doc.add_paragraph("Key Metrics", style='CustomHeading2')
-        
-        # Create table
-        table = self.doc.add_table(rows=1, cols=2)
-        table.style = 'Table Grid'
-        table.autofit = True
-        
-        # Add header row
-        header_cells = table.rows[0].cells
-        header_cells[0].text = "Metric"
-        header_cells[1].text = "Value"
-        
-        # Style header
-        for cell in header_cells:
-            cell.paragraphs[0].style = self.doc.styles['CustomHeading3']
-        
-        # Add metric rows
-        for metric, value in metrics.items():
-            row_cells = table.add_row().cells
-            row_cells[0].text = metric
-            row_cells[1].text = str(value)
+            # Regenerate with shorter content
+            self.add_cover_page(
+                "Flash Report",
+                f"Generated on {datetime.datetime.now().strftime('%B %d, %Y')}"
+            )
             
-            # Style cells
-            for cell in row_cells:
-                cell.paragraphs[0].style = self.doc.styles['CustomBody']
-
-    def add_quotes(self, quotes: list):
-        """
-        Add a section of highlighted quotes.
-        
-        Args:
-            quotes: List of quote strings
-        """
-        for quote in quotes:
-            quote = self._clean_markdown(quote)
-            p = self.doc.add_paragraph(style='CustomQuote')
-            p.add_run(f'"{quote}"')
-
-    def save(self, output_path: str):
-        """
-        Save the document to disk.
-        
-        Args:
-            output_path: Path where to save the DOCX file
-        """
-        self.doc.save(output_path) 
+            # Add sections with reduced content
+            for section in doc.sections[0].text.split('\n\n'):
+                if section.strip():
+                    title = section.split('\n')[0]
+                    content = '\n'.join(section.split('\n')[1:])
+                    self.add_section(title, content, max_length=300)  # Limit each section
+            
+            # Save truncated version
+            self.doc.save(filename) 
