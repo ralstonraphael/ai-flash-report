@@ -152,27 +152,54 @@ def upload_section():
         # Process button
         if st.button("Process Documents", type="primary"):
             with st.status("Processing documents...") as status:
+                # Create vectorstore directory if it doesn't exist
+                Path(VECTORSTORE_PATH).mkdir(parents=True, exist_ok=True)
+                
+                # Create temp directory with explicit cleanup
                 temp_dir = tempfile.mkdtemp()
                 file_paths = []
                 
                 try:
-                    # Save files
+                    # Save files with progress indicator
+                    status.write("Saving uploaded files...")
                     for file in uploaded_files:
-                        temp_path = Path(temp_dir) / file.name
-                        with open(temp_path, "wb") as f:
-                            f.write(file.getvalue())
-                        file_paths.append(temp_path)
-                        status.write(f"Saved: {file.name}")
+                        try:
+                            temp_path = Path(temp_dir) / file.name
+                            with open(temp_path, "wb") as f:
+                                f.write(file.getvalue())
+                            file_paths.append(temp_path)
+                            status.write(f"✓ Saved: {file.name}")
+                        except Exception as e:
+                            st.error(f"Error saving {file.name}: {str(e)}")
+                            logger.error(f"File save error - {file.name}: {str(e)}")
+                            continue
                     
-                    # Process documents
+                    if not file_paths:
+                        st.error("No files were successfully saved. Please try again.")
+                        return
+                    
+                    # Process documents with detailed progress
                     status.write("Analyzing documents...")
                     loader = DocumentLoader()
-                    documents = loader.load_batch(file_paths)
+                    try:
+                        documents = loader.load_batch(file_paths)
+                        status.write(f"✓ Successfully analyzed {len(documents)} document chunks")
+                    except Exception as e:
+                        st.error(f"Error analyzing documents: {str(e)}")
+                        logger.error(f"Document analysis error: {str(e)}")
+                        return
                     
+                    # Create vector store
                     status.write("Creating knowledge base...")
-                    vectorstore = VectorStore()
-                    collection_name = "uploaded_docs_" + str(hash("".join([str(f.name) for f in uploaded_files])))
-                    vectorstore.create_collection(documents, collection_name)
+                    try:
+                        vectorstore = VectorStore()
+                        collection_name = "uploaded_docs_" + datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                        vectorstore.create_collection(documents, collection_name)
+                        status.write("✓ Knowledge base created successfully")
+                    except Exception as e:
+                        st.error(f"Error creating knowledge base: {str(e)}")
+                        logger.error(f"Vectorstore error: {str(e)}")
+                        return
                     
                     # Update session state
                     st.session_state.documents_loaded = True
@@ -183,7 +210,7 @@ def upload_section():
                     
                     # Show success message with stats
                     st.success(f"""
-                    Processed {len(uploaded_files)} documents:
+                    Successfully processed {len(uploaded_files)} documents:
                     - Created {len(documents)} text chunks
                     - Documents are ready for analysis
                     """)
@@ -192,18 +219,21 @@ def upload_section():
                     st.info("👉 Go to the Analysis tab to start exploring your documents")
                     
                 except Exception as e:
-                    logger.error(f"Error: {str(e)}")
-                    st.error("Error processing documents. Please check file formats and try again.")
+                    logger.error(f"Unexpected error: {str(e)}")
+                    st.error(f"An unexpected error occurred: {str(e)}")
                     
                 finally:
-                    # Cleanup
+                    # Cleanup with error handling
+                    status.write("Cleaning up temporary files...")
                     for path in file_paths:
                         try:
-                            os.remove(path)
+                            if path.exists():
+                                path.unlink()
                         except Exception as e:
-                            logger.error(f"Error removing {path}: {e}")
+                            logger.error(f"Error removing temp file {path}: {e}")
                     try:
-                        os.rmdir(temp_dir)
+                        if Path(temp_dir).exists():
+                            Path(temp_dir).rmdir()
                     except Exception as e:
                         logger.error(f"Error removing temp dir: {e}")
 
