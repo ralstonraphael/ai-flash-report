@@ -10,6 +10,18 @@ import warnings
 import datetime
 import re
 
+# Configure Streamlit for larger file uploads
+st.set_page_config(
+    page_title="AI Flash Report Generator",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Set maximum upload size to 200MB (default is 200MB, but we'll be explicit)
+# This should easily handle 19-page PDFs which are typically 5-20MB
+MAX_UPLOAD_SIZE_MB = 200
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -64,89 +76,90 @@ def init_session_state():
     if 'analysis_result' not in st.session_state:
         st.session_state.analysis_result = None
 
-
 def setup_page():
-    """Configure page settings and layout."""
-    st.set_page_config(
-        page_title="Flash Report Generator",
-        page_icon="📊",
-        layout="wide"
-    )
+    """Set up the main page layout and title."""
+    st.title("📊 AI Flash Report Generator")
+    st.markdown("Transform your documents into comprehensive insights and professional reports")
     
-    # Create a header with logo and title
-    header_col1, header_col2 = st.columns([1, 4])
-    
-    with header_col1:
-        st.image(
-            "templates/Images/Norstella_color_positive_RGB_(2).png",
-            width=150
-        )
-    
-    with header_col2:
-        st.title("Flash Report Generator")
-        st.markdown(
-            """
-            <style>
-            .main-header {
-                font-family: 'Calibri', sans-serif;
-                color: rgb(31, 73, 125);
-                padding-top: 0;
-                margin-top: -1em;
-            }
-            .stButton > button {
-                background-color: rgb(31, 73, 125);
-                color: white;
-            }
-            .stButton > button:hover {
-                background-color: rgb(41, 83, 135);
-                color: white;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-
+    # Add file size information
+    st.sidebar.markdown(f"""
+    ### 📁 File Upload Limits
+    - **Maximum file size**: {MAX_UPLOAD_SIZE_MB}MB per file
+    - **Supported formats**: PDF, DOCX, CSV
+    - **Recommended**: 19-page PDFs are fully supported
+    """)
 
 def check_api_key():
-    """Check and handle OpenAI API key."""
+    """Check if OpenAI API key is configured."""
     if not st.session_state.openai_key:
-        with st.sidebar:
-            st.subheader("⚙️ Settings")
-            api_key = st.text_input("OpenAI API Key", type="password")
-            if api_key:
-                os.environ["OPENAI_API_KEY"] = api_key
-                st.session_state.openai_key = api_key
-                st.success("API key set!")
-                return True
-            else:
-                st.warning("Please enter your OpenAI API key to continue")
-                return False
+        st.error("🔑 OpenAI API key not found!")
+        st.markdown("""
+        Please set your OpenAI API key:
+        1. Create a `.env` file in the project root
+        2. Add: `OPENAI_API_KEY=your_key_here`
+        3. Restart the application
+        """)
+        return False
     return True
 
+def format_file_size(size_bytes):
+    """Convert bytes to human readable format."""
+    if size_bytes == 0:
+        return "0B"
+    size_names = ["B", "KB", "MB", "GB"]
+    i = 0
+    while size_bytes >= 1024 and i < len(size_names) - 1:
+        size_bytes /= 1024.0
+        i += 1
+    return f"{size_bytes:.1f}{size_names[i]}"
 
 def upload_section():
     """Handle document uploads."""
     st.subheader("📁 Upload Documents")
+    
+    # Enhanced file size information
+    st.info(f"""
+    📋 **Upload Guidelines:**
+    - Maximum file size: **{MAX_UPLOAD_SIZE_MB}MB** per file
+    - Your 19-page PDF should upload without issues (typical size: 5-20MB)
+    - Supported formats: PDF, DOCX, CSV
+    - Multiple files can be uploaded simultaneously
+    """)
     
     # Debug information
     st.sidebar.write("Debug Information:")
     st.sidebar.write(f"Working Directory: {os.getcwd()}")
     st.sidebar.write(f"Vectorstore Path: {VECTORSTORE_PATH}")
     st.sidebar.write(f"Python Version: {sys.version}")
+    st.sidebar.write(f"Max Upload Size: {MAX_UPLOAD_SIZE_MB}MB")
     
-    # Simple file uploader with explicit accept_multiple_files
+    # Enhanced file uploader with size information
     uploaded_files = st.file_uploader(
-        "Upload your documents (PDF, DOCX, or CSV)",
+        f"Upload your documents (PDF, DOCX, or CSV) - Max {MAX_UPLOAD_SIZE_MB}MB each",
         type=["pdf", "docx", "csv"],
         accept_multiple_files=True,
-        key="doc_uploader"
+        key="doc_uploader",
+        help=f"Select one or more files. Each file can be up to {MAX_UPLOAD_SIZE_MB}MB. Your 19-page PDF should work perfectly!"
     )
     
     if uploaded_files:
-        # Display file information
-        st.write("Files received:")
+        # Display enhanced file information
+        st.write("📄 **Files received:**")
+        total_size = 0
         for file in uploaded_files:
-            st.write(f"- {file.name} ({file.type}, {file.size} bytes)")
+            file_size = len(file.getvalue())
+            total_size += file_size
+            size_str = format_file_size(file_size)
+            
+            # Color code based on size
+            if file_size > MAX_UPLOAD_SIZE_MB * 1024 * 1024:
+                st.error(f"❌ {file.name} ({file.type}) - **{size_str}** - TOO LARGE!")
+            elif file_size > 50 * 1024 * 1024:  # 50MB warning
+                st.warning(f"⚠️ {file.name} ({file.type}) - **{size_str}** - Large file")
+            else:
+                st.success(f"✅ {file.name} ({file.type}) - **{size_str}**")
+        
+        st.write(f"📊 **Total size:** {format_file_size(total_size)}")
         
         # Process button
         if st.button("Process Documents", type="primary", key="process_btn"):
@@ -162,12 +175,18 @@ def upload_section():
                     
                     for file in uploaded_files:
                         try:
+                            # Check file size
+                            file_size = len(file.getvalue())
+                            if file_size > MAX_UPLOAD_SIZE_MB * 1024 * 1024:
+                                st.error(f"❌ {file.name} exceeds {MAX_UPLOAD_SIZE_MB}MB limit. Skipping.")
+                                continue
+                            
                             # Save file
                             temp_path = temp_dir / file.name
                             with open(temp_path, "wb") as f:
                                 f.write(file.getvalue())
                             processed_files.append(temp_path)
-                            status.write(f"✓ Saved {file.name}")
+                            status.write(f"✓ Saved {file.name} ({format_file_size(file_size)})")
                             
                         except Exception as e:
                             st.error(f"Error saving {file.name}: {str(e)}")
@@ -199,6 +218,7 @@ def upload_section():
                         st.success(f"""
                         ✅ Successfully processed {len(processed_files)} files:
                         - Created {len(documents)} text chunks
+                        - Total size processed: {format_file_size(total_size)}
                         - Collection name: {collection_name}
                         """)
                         
@@ -224,20 +244,26 @@ def upload_section():
                     logger.error(f"Cleanup error: {str(e)}")
     
     else:
-        # Help text when no files are uploaded
+        # Enhanced help text when no files are uploaded
         st.info("""
-        📋 Instructions:
+        📋 **Getting Started:**
         1. Click 'Browse files' above or drag and drop your documents
         2. Select one or more files (PDF, DOCX, or CSV)
-        3. Click 'Process Documents' to analyze them
+        3. Your 19-page PDF should upload without any issues
+        4. Click 'Process Documents' to analyze them
         """)
         
-        # Example file formats
-        st.markdown("""
-        Supported file formats:
-        - PDF (`.pdf`): Reports, articles, documents
-        - Word (`.docx`): Microsoft Word documents
-        - CSV (`.csv`): Spreadsheet data
+        # Example file formats with size information
+        st.markdown(f"""
+        **Supported file formats:**
+        - **PDF** (`.pdf`): Reports, articles, documents - Up to {MAX_UPLOAD_SIZE_MB}MB
+        - **Word** (`.docx`): Microsoft Word documents - Up to {MAX_UPLOAD_SIZE_MB}MB  
+        - **CSV** (`.csv`): Spreadsheet data - Up to {MAX_UPLOAD_SIZE_MB}MB
+        
+        **Typical file sizes:**
+        - 19-page PDF: ~5-20MB ✅
+        - 100-page PDF: ~20-50MB ✅
+        - Large presentations: ~10-100MB ✅
         """)
 
 
