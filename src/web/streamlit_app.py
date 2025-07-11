@@ -80,14 +80,6 @@ def setup_page():
     """Set up the main page layout and title."""
     st.title("📊 AI Flash Report Generator")
     st.markdown("Transform your documents into comprehensive insights and professional reports")
-    
-    # Add file size information
-    st.sidebar.markdown(f"""
-    ### 📁 File Upload Limits
-    - **Maximum file size**: {MAX_UPLOAD_SIZE_MB}MB per file
-    - **Supported formats**: PDF, DOCX, CSV
-    - **Recommended**: 19-page PDFs are fully supported
-    """)
 
 def check_api_key():
     """Check if OpenAI API key is configured."""
@@ -117,154 +109,174 @@ def upload_section():
     """Handle document uploads."""
     st.subheader("📁 Upload Documents")
     
-    # Enhanced file size information
-    st.info(f"""
-    📋 **Upload Guidelines:**
-    - Maximum file size: **{MAX_UPLOAD_SIZE_MB}MB** per file
-    - Your 19-page PDF should upload without issues (typical size: 5-20MB)
-    - Supported formats: PDF, DOCX, CSV
-    - Multiple files can be uploaded simultaneously
-    """)
+    # Add upload troubleshooting
+    if st.button("🔄 Reset Upload", help="Click if files aren't uploading properly"):
+        st.session_state.pop('doc_uploader', None)
+        st.rerun()
     
-    # Debug information
-    st.sidebar.write("Debug Information:")
-    st.sidebar.write(f"Working Directory: {os.getcwd()}")
-    st.sidebar.write(f"Vectorstore Path: {VECTORSTORE_PATH}")
-    st.sidebar.write(f"Python Version: {sys.version}")
-    st.sidebar.write(f"Max Upload Size: {MAX_UPLOAD_SIZE_MB}MB")
-    
-    # Enhanced file uploader with size information
+    # Simple, clean file uploader
     uploaded_files = st.file_uploader(
-        f"Upload your documents (PDF, DOCX, or CSV) - Max {MAX_UPLOAD_SIZE_MB}MB each",
+        "Choose your documents",
         type=["pdf", "docx", "csv"],
         accept_multiple_files=True,
-        key="doc_uploader",
-        help=f"Select one or more files. Each file can be up to {MAX_UPLOAD_SIZE_MB}MB. Your 19-page PDF should work perfectly!"
+        key="doc_uploader"
     )
     
+    # Debug information for troubleshooting
+    if st.checkbox("Show debug info", help="Check this if you're having upload issues"):
+        st.write("**Debug Information:**")
+        st.write(f"- Working Directory: {os.getcwd()}")
+        st.write(f"- Vectorstore Path: {VECTORSTORE_PATH}")
+        st.write(f"- Max Upload Size: {MAX_UPLOAD_SIZE_MB}MB")
+        if uploaded_files:
+            st.write(f"- Files detected: {len(uploaded_files)}")
+            for i, file in enumerate(uploaded_files):
+                st.write(f"  - File {i+1}: {file.name} ({file.type})")
+    
     if uploaded_files:
-        # Display enhanced file information
-        st.write("📄 **Files received:**")
+        # Display file information cleanly
+        st.write("**Files selected:**")
         total_size = 0
+        valid_files = []
+        
         for file in uploaded_files:
-            file_size = len(file.getvalue())
-            total_size += file_size
-            size_str = format_file_size(file_size)
-            
-            # Color code based on size
-            if file_size > MAX_UPLOAD_SIZE_MB * 1024 * 1024:
-                st.error(f"❌ {file.name} ({file.type}) - **{size_str}** - TOO LARGE!")
-            elif file_size > 50 * 1024 * 1024:  # 50MB warning
-                st.warning(f"⚠️ {file.name} ({file.type}) - **{size_str}** - Large file")
-            else:
-                st.success(f"✅ {file.name} ({file.type}) - **{size_str}**")
-        
-        st.write(f"📊 **Total size:** {format_file_size(total_size)}")
-        
-        # Process button
-        if st.button("Process Documents", type="primary", key="process_btn"):
             try:
-                # Create necessary directories
-                Path(VECTORSTORE_PATH).mkdir(parents=True, exist_ok=True)
-                temp_dir = Path(tempfile.mkdtemp())
-                st.write(f"Created temp directory: {temp_dir}")
+                # Get file size safely
+                file_content = file.getvalue()
+                file_size = len(file_content)
+                total_size += file_size
+                size_str = format_file_size(file_size)
                 
-                # Process each file
-                with st.status("Processing documents...") as status:
-                    processed_files = []
+                # Check file size
+                if file_size > MAX_UPLOAD_SIZE_MB * 1024 * 1024:
+                    st.error(f"❌ {file.name} - {size_str} (exceeds {MAX_UPLOAD_SIZE_MB}MB limit)")
+                else:
+                    st.success(f"✅ {file.name} - {size_str}")
+                    valid_files.append(file)
                     
-                    for file in uploaded_files:
-                        try:
-                            # Check file size
-                            file_size = len(file.getvalue())
-                            if file_size > MAX_UPLOAD_SIZE_MB * 1024 * 1024:
-                                st.error(f"❌ {file.name} exceeds {MAX_UPLOAD_SIZE_MB}MB limit. Skipping.")
+            except Exception as e:
+                st.error(f"❌ {file.name} - Error reading file: {str(e)}")
+                logger.error(f"File reading error for {file.name}: {str(e)}")
+                continue
+        
+        if valid_files:
+            st.write(f"Total size: {format_file_size(total_size)}")
+            
+            # Process button
+            if st.button("Process Documents", type="primary", key="process_btn"):
+                try:
+                    # Create necessary directories
+                    Path(VECTORSTORE_PATH).mkdir(parents=True, exist_ok=True)
+                    temp_dir = Path(tempfile.mkdtemp())
+                    
+                    # Process each file
+                    with st.status("Processing documents...") as status:
+                        processed_files = []
+                        
+                        for file in valid_files:
+                            try:
+                                # Save file with better error handling
+                                temp_path = temp_dir / file.name
+                                file_content = file.getvalue()
+                                
+                                # Validate file content
+                                if not file_content:
+                                    st.error(f"❌ {file.name} - File appears to be empty")
+                                    continue
+                                
+                                with open(temp_path, "wb") as f:
+                                    f.write(file_content)
+                                
+                                # Verify file was written
+                                if not temp_path.exists() or temp_path.stat().st_size == 0:
+                                    st.error(f"❌ {file.name} - Failed to save file")
+                                    continue
+                                
+                                processed_files.append(temp_path)
+                                status.write(f"✓ Saved {file.name}")
+                                
+                            except Exception as e:
+                                st.error(f"Error saving {file.name}: {str(e)}")
+                                logger.error(f"File save error for {file.name}: {str(e)}")
                                 continue
+                        
+                        if not processed_files:
+                            st.error("No files were successfully processed.")
+                            return
+                        
+                        try:
+                            # Load documents
+                            status.write("Loading documents...")
+                            loader = DocumentLoader()
+                            documents = loader.load_batch(processed_files)
+                            status.write(f"✓ Loaded {len(documents)} document chunks")
                             
-                            # Save file
-                            temp_path = temp_dir / file.name
-                            with open(temp_path, "wb") as f:
-                                f.write(file.getvalue())
-                            processed_files.append(temp_path)
-                            status.write(f"✓ Saved {file.name} ({format_file_size(file_size)})")
+                            # Create vector store
+                            status.write("Creating knowledge base...")
+                            vectorstore = VectorStore()
+                            collection_name = f"docs_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                            vectorstore.create_collection(documents, collection_name)
+                            
+                            # Update session state
+                            st.session_state.documents_loaded = True
+                            st.session_state.vectorstore = vectorstore
+                            st.session_state.collection_name = collection_name
+                            
+                            # Success message
+                            st.success(f"""
+                            ✅ Successfully processed {len(processed_files)} files
+                            - Created {len(documents)} text chunks
+                            - Collection: {collection_name}
+                            """)
+                            
+                            # Guide to next step
+                            st.info("👉 Go to the Analysis tab to start exploring your documents")
                             
                         except Exception as e:
-                            st.error(f"Error saving {file.name}: {str(e)}")
-                            continue
+                            st.error(f"Error processing documents: {str(e)}")
+                            logger.error(f"Document processing error: {str(e)}")
                     
-                    if not processed_files:
-                        st.error("No files were successfully processed.")
-                        return
-                    
-                    try:
-                        # Load documents
-                        status.write("Loading documents...")
-                        loader = DocumentLoader()
-                        documents = loader.load_batch(processed_files)
-                        status.write(f"✓ Loaded {len(documents)} document chunks")
-                        
-                        # Create vector store
-                        status.write("Creating knowledge base...")
-                        vectorstore = VectorStore()
-                        collection_name = f"docs_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                        vectorstore.create_collection(documents, collection_name)
-                        
-                        # Update session state
-                        st.session_state.documents_loaded = True
-                        st.session_state.vectorstore = vectorstore
-                        st.session_state.collection_name = collection_name
-                        
-                        # Success message
-                        st.success(f"""
-                        ✅ Successfully processed {len(processed_files)} files:
-                        - Created {len(documents)} text chunks
-                        - Total size processed: {format_file_size(total_size)}
-                        - Collection name: {collection_name}
-                        """)
-                        
-                        # Guide to next step
-                        st.info("👉 Click the Analysis tab above to start exploring your documents")
-                        
-                    except Exception as e:
-                        st.error(f"Error processing documents: {str(e)}")
-                        st.error("Please try again with different files or contact support.")
-                        logger.error(f"Document processing error: {str(e)}")
-                
-            except Exception as e:
-                st.error(f"Unexpected error: {str(e)}")
-                logger.error(f"Unexpected error in upload section: {str(e)}")
-            
-            finally:
-                # Cleanup
-                try:
-                    for path in processed_files:
-                        path.unlink(missing_ok=True)
-                    temp_dir.rmdir()
                 except Exception as e:
-                    logger.error(f"Cleanup error: {str(e)}")
+                    st.error(f"Unexpected error: {str(e)}")
+                    logger.error(f"Unexpected error in upload section: {str(e)}")
+                
+                finally:
+                    # Cleanup
+                    try:
+                        if 'processed_files' in locals():
+                            for path in processed_files:
+                                if path.exists():
+                                    path.unlink()
+                        if 'temp_dir' in locals() and temp_dir.exists():
+                            temp_dir.rmdir()
+                    except Exception as e:
+                        logger.error(f"Cleanup error: {str(e)}")
+        else:
+            st.warning("No valid files selected. Please check file sizes and formats.")
     
     else:
-        # Enhanced help text when no files are uploaded
-        st.info("""
-        📋 **Getting Started:**
-        1. Click 'Browse files' above or drag and drop your documents
-        2. Select one or more files (PDF, DOCX, or CSV)
-        3. Your 19-page PDF should upload without any issues
-        4. Click 'Process Documents' to analyze them
+        # Simple help text
+        st.info("Select PDF, DOCX, or CSV files to get started")
+        
+        # Show supported formats in sidebar instead
+        st.sidebar.markdown("""
+        ### 📋 Supported Formats
+        - **PDF** (.pdf) - Up to 200MB
+        - **Word** (.docx) - Up to 200MB  
+        - **CSV** (.csv) - Up to 200MB
         """)
         
-        # Example file formats with size information
-        st.markdown(f"""
-        **Supported file formats:**
-        - **PDF** (`.pdf`): Reports, articles, documents - Up to {MAX_UPLOAD_SIZE_MB}MB
-        - **Word** (`.docx`): Microsoft Word documents - Up to {MAX_UPLOAD_SIZE_MB}MB  
-        - **CSV** (`.csv`): Spreadsheet data - Up to {MAX_UPLOAD_SIZE_MB}MB
-        
-        **Typical file sizes:**
-        - 19-page PDF: ~5-20MB ✅
-        - 100-page PDF: ~20-50MB ✅
-        - Large presentations: ~10-100MB ✅
-        """)
+        # Troubleshooting tips
+        with st.expander("📋 Troubleshooting Upload Issues"):
+            st.markdown("""
+            **If files aren't uploading:**
+            1. Try clicking the "Reset Upload" button above
+            2. Refresh the page (F5 or Ctrl+R)
+            3. Check file size (must be under 200MB)
+            4. Ensure file format is PDF, DOCX, or CSV
+            5. Try uploading one file at a time
+            6. Check the "Show debug info" checkbox for more details
+            """)
 
 
 def analysis_section():
