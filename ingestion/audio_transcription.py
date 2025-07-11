@@ -1,1 +1,0 @@
-from config import VECTORSTORE_PATH, CHUNK_SIZE, CHUNK_OVERLAP
