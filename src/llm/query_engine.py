@@ -79,45 +79,71 @@ class QueryEngine:
         """)
 
         self.summary_prompt = ChatPromptTemplate.from_template("""
-            Create a very concise summary focusing only on the most critical points.
-            Limit to 2-3 short paragraphs maximum.
-            Focus on key changes, updates, and strategic implications.
+            Create a comprehensive and detailed summary of the provided context.
+            Include all significant points, changes, updates, and strategic implications.
+            
+            Structure your response in multiple sections:
+            1. Executive Overview (2-3 paragraphs)
+            2. Key Changes and Updates (detailed bullet points)
+            3. Strategic Implications (thorough analysis)
+            4. Future Outlook (insights and predictions)
+            
+            For each section, provide rich detail and supporting information.
+            Use specific examples and data points from the context when available.
 
             Context:
             {context}
 
             Query: {query}
 
-            Keep the response brief and focused on essential information only.
+            Aim for a thorough and insightful analysis that covers all important aspects.
         """)
 
         self.qa_prompt = ChatPromptTemplate.from_template("""
-            Provide a direct, concise answer using only the provided context.
+            Provide a comprehensive and detailed answer using the provided context.
             If the answer cannot be found in the context, say so clearly.
-            Limit response to 1-2 short paragraphs.
-
+            
+            Structure your response to include:
+            1. Direct answer to the question (detailed explanation)
+            2. Supporting evidence and examples from the context
+            3. Related implications and considerations
+            4. Additional relevant insights
+            
             Context:
             {context}
 
             Question: {query}
 
-            Focus on key facts and implications only.
+            Provide a thorough analysis that gives the full picture.
         """)
 
         self.extraction_prompt = ChatPromptTemplate.from_template("""
-            Extract only the most important metrics and data points.
-            Format each point concisely on a new line.
-            Limit to 5-7 key metrics maximum.
+            Extract and analyze all relevant metrics and data points.
+            Provide detailed context and interpretation for each metric.
+            
+            Structure your response as follows:
+            1. Key Performance Indicators
+               • Detailed breakdown of each metric
+               • Historical trends when available
+               • Context and implications
+            
+            2. Market and Competition Metrics
+               • Market share data
+               • Competitive positioning
+               • Industry benchmarks
+            
+            3. Financial and Operational Metrics
+               • Detailed financial analysis
+               • Operational performance indicators
+               • Growth metrics
             
             Context:
             {context}
 
             Data to extract: {query}
 
-            Format as:
-            • Metric: Value (Time Period)
-            
-            Focus on metrics that provide strategic insights.
+            Format each section with detailed bullet points and provide analysis for each metric.
+            Include trends, comparisons, and strategic implications where possible.
         """)
 
     async def _execute_with_timeout(self, func, *args, **kwargs):
@@ -165,59 +191,81 @@ class QueryEngine:
 
     def generate_section_content(self, section_type: str, context: List[str]) -> str:
         """
-        Generate content for a specific report section with length constraints.
+        Generate detailed content for a specific report section.
         
         Args:
             section_type: Type of section (summary, overview, etc.)
             context: Retrieved context chunks
             
         Returns:
-            Concise section content
+            Comprehensive section content
         """
         prompts = {
             "executive_summary": """
-                Generate a very concise executive summary (2-3 sentences).
-                Focus on the most important changes and implications.
+                Generate a detailed executive summary that covers all key aspects.
+                Include comprehensive analysis of changes, trends, and implications.
+                
+                Structure your response:
+                1. Overview (2-3 detailed paragraphs)
+                2. Key Developments (comprehensive bullet points)
+                3. Strategic Analysis (thorough examination)
+                4. Recommendations (detailed action items)
                 
                 Context: {context}
                 
-                Keep it extremely brief but impactful.
+                Provide rich detail and supporting evidence for each point.
             """,
             
             "company_overview": """
-                Provide a brief company overview (2-3 bullet points).
-                Include only essential business model and strategic information.
+                Provide a comprehensive company overview that includes:
+                1. Detailed business model analysis
+                2. Historical development and milestones
+                3. Current market position and strategy
+                4. Organizational structure and leadership
+                5. Core competencies and capabilities
                 
                 Context: {context}
                 
-                Format as short bullet points.
+                Include specific examples and data points where available.
             """,
             
             "core_offerings": """
-                List main products/services (3-4 bullet points maximum).
-                Focus on recent changes and key features.
+                Provide a detailed analysis of products/services including:
+                1. Comprehensive product/service portfolio
+                2. Recent developments and innovations
+                3. Market reception and performance
+                4. Competitive advantages
+                5. Future roadmap and potential
                 
                 Context: {context}
                 
-                Keep each point to one line.
+                Include specific features, benefits, and market impact.
             """,
             
             "market_position": """
-                Summarize market position in 2-3 key points.
-                Include only critical competitive information.
+                Deliver a thorough analysis of market position including:
+                1. Detailed market share analysis
+                2. Competitive landscape evaluation
+                3. Key differentiators and advantages
+                4. Market trends and dynamics
+                5. Growth opportunities and challenges
                 
                 Context: {context}
                 
-                Focus on differentiators and trends.
+                Support each point with specific data and examples.
             """,
             
             "strategic_insights": """
-                Provide 3-4 key strategic insights or recommendations.
-                Make each point actionable and specific.
+                Provide comprehensive strategic insights including:
+                1. Detailed SWOT analysis
+                2. Market opportunities and threats
+                3. Competitive advantages and challenges
+                4. Growth strategies and recommendations
+                5. Risk analysis and mitigation
                 
                 Context: {context}
                 
-                Format as brief bullet points.
+                Include specific, actionable recommendations with supporting rationale.
             """
         }
         
