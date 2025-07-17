@@ -11,17 +11,9 @@ import shutil
 import sys
 import os
 
-# Set up logging first
+# Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Try to use pysqlite3 if available, otherwise continue with default sqlite3
-try:
-    import pysqlite3
-    sys.modules['sqlite3'] = pysqlite3
-    logger.info("Using pysqlite3 for better SQLite compatibility")
-except ImportError:
-    logger.warning("pysqlite3 not available, using default sqlite3")
 
 # Filter deprecation warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -33,7 +25,6 @@ import chromadb
 from chromadb.config import Settings
 
 from src.config import VECTORSTORE_PATH
-
 
 class VectorStore:
     """Manages document embeddings and retrieval using ChromaDB."""
@@ -51,12 +42,10 @@ class VectorStore:
         self.persist_dir = str(persist_dir)
         self.current_collection = None
         
-        # Configure ChromaDB with settings optimized for older SQLite
+        # Configure ChromaDB with standard settings
         self.client = chromadb.Client(Settings(
             anonymized_telemetry=False,
-            allow_reset=True,
-            is_persistent=False,  # Use in-memory mode
-            chroma_db_impl="duckdb+parquet"  # Use DuckDB instead of SQLite
+            allow_reset=True
         ))
 
     def _clean_collection_name(self, name: str) -> str:

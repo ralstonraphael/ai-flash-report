@@ -6,17 +6,9 @@ import os
 from pathlib import Path
 import logging
 
-# Set up logging first
+# Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Try to use pysqlite3 if available, otherwise continue with default sqlite3
-try:
-    import pysqlite3
-    sys.modules['sqlite3'] = pysqlite3
-    logger.info("Using pysqlite3 for better SQLite compatibility")
-except ImportError:
-    logger.warning("pysqlite3 not available, using default sqlite3")
 
 # Add the project root to the Python path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
