@@ -42,11 +42,15 @@ class VectorStore:
         self.persist_dir = str(persist_dir)
         self.current_collection = None
         
-        # Configure ChromaDB with standard settings
-        self.client = chromadb.Client(Settings(
-            anonymized_telemetry=False,
-            allow_reset=True
-        ))
+        # Configure ChromaDB to use HTTP client mode
+        self.client = chromadb.HttpClient(
+            host="localhost",
+            port=8000,
+            settings=Settings(
+                anonymized_telemetry=False,
+                allow_reset=True
+            )
+        )
 
     def _clean_collection_name(self, name: str) -> str:
         """Clean collection name to be compatible with ChromaDB."""
