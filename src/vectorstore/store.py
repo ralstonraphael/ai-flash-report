@@ -15,6 +15,8 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 from langchain.schema import Document as LangChainDocument
 from langchain_community.vectorstores import Chroma
 from langchain_openai import OpenAIEmbeddings
+import chromadb
+from chromadb.config import Settings
 
 from src.config import VECTORSTORE_PATH
 
@@ -33,28 +35,21 @@ class VectorStore:
         
         Args:
             embedding_function: OpenAI embeddings instance (will create if None)
-            persist_dir: Directory to persist ChromaDB files
+            persist_dir: Directory to persist ChromaDB files (not used in in-memory mode)
         """
         self.embedding_function = embedding_function or OpenAIEmbeddings()
-        self.persist_dir = str(persist_dir)  # Convert Path to string for ChromaDB
+        self.persist_dir = str(persist_dir)  # Keep for reference but not used
         self.current_collection = None
         
-        # Ensure the persist directory exists
-        Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
+        # Configure ChromaDB to use in-memory storage
+        self.client = chromadb.Client(Settings(
+            is_persistent=False,  # Use in-memory storage
+            anonymized_telemetry=False
+        ))
 
     def _clean_collection_name(self, name: str) -> str:
         """Clean collection name to be compatible with ChromaDB."""
         return re.sub(r'[^a-zA-Z0-9_\-]', '_', name)
-
-    def _reset_database(self):
-        """Reset the ChromaDB database by removing all files."""
-        try:
-            if Path(self.persist_dir).exists():
-                shutil.rmtree(self.persist_dir)
-                logger.info(f"Reset ChromaDB database at {self.persist_dir}")
-            Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
-        except Exception as e:
-            logger.error(f"Failed to reset database: {str(e)}")
 
     def create_collection(self, documents: List[LangChainDocument],
                         collection_name: str) -> Chroma:
@@ -75,31 +70,21 @@ class VectorStore:
         clean_name = self._clean_collection_name(collection_name)
         logger.info(f"Creating collection '{clean_name}' with {len(documents)} documents")
         
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                # Create ChromaDB collection
-                self.current_collection = Chroma.from_documents(
-                    documents=documents,
-                    embedding=self.embedding_function,
-                    persist_directory=self.persist_dir,
-                    collection_name=clean_name
-                )
+        try:
+            # Create ChromaDB collection using in-memory client
+            self.current_collection = Chroma.from_documents(
+                documents=documents,
+                embedding=self.embedding_function,
+                client=self.client,
+                collection_name=clean_name
+            )
+            
+            logger.info(f"Successfully created collection '{clean_name}'")
+            return self.current_collection
                 
-                logger.info(f"Successfully created collection '{clean_name}'")
-                return self.current_collection
-                
-            except Exception as e:
-                logger.error(f"Attempt {attempt + 1} failed: {str(e)}")
-                
-                if "no such table: tenants" in str(e) or "Database error" in str(e):
-                    logger.warning("Database corruption detected, resetting...")
-                    self._reset_database()
-                    
-                if attempt == max_retries - 1:
-                    raise Exception(f"Failed to create collection after {max_retries} attempts: {str(e)}")
-                    
-        return None
+        except Exception as e:
+            logger.error(f"Failed to create collection: {str(e)}")
+            raise
 
     def load_collection(self, collection_name: str) -> Chroma:
         """
@@ -112,7 +97,7 @@ class VectorStore:
             ChromaDB collection instance
         """
         collection = Chroma(
-            persist_directory=self.persist_dir,
+            client=self.client,
             embedding_function=self.embedding_function,
             collection_name=self._clean_collection_name(collection_name)
         )
