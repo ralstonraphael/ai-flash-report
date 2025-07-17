@@ -1,10 +1,15 @@
 """
 Streamlit web interface for the Flash Report Generator.
 """
-import streamlit as st
-from pathlib import Path
-import tempfile
+import sys
 import os
+from pathlib import Path
+
+# Add the project root to the Python path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+
+import streamlit as st
+import tempfile
 import logging
 import warnings
 import datetime
@@ -45,9 +50,8 @@ os.environ["ANONYMIZED_TELEMETRY"] = "False"
 os.environ["CHROMADB_TELEMETRY"] = "False"
 
 # Configure event loop policy for macOS
-import sys
+import asyncio
 if sys.platform == "darwin":
-    import asyncio
     try:
         asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
     except Exception as e:

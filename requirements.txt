@@ -29,3 +29,6 @@ nltk>=3.6.0
 tqdm==4.67.1
 numpy==2.2.6
 pydantic==2.11.5
+
+# Install local package in editable mode
+-e .
