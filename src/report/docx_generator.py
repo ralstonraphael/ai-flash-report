@@ -23,18 +23,6 @@ from src.config import TEMPLATE_PATH
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Optional imports for chart features
-plt = None
-np = None
-
-class ChartType:
-    """Supported chart types."""
-    BAR = "bar"
-    LINE = "line"
-    PIE = "pie"
-    STACKED_BAR = "stacked_bar"
-    HORIZONTAL_BAR = "horizontal_bar"
-
 class ReportGenerator:
     """Generates formatted one-page DOCX reports with Norstella styling."""
     
@@ -249,149 +237,24 @@ class ReportGenerator:
                     bullet_text = text.strip()[1:].strip()
                     if bullet_text:  # Only add if there's actual content
                         p = self.doc.add_paragraph(style='NorstList')
-                        p.add_run('• ')
-                        self._parse_markdown_text(bullet_text, p)
+                        p.add_run(bullet_text)
                 else:
-                    # Regular paragraph with markdown formatting
-                    if text.strip():  # Only add if there's actual content
-                        self._add_formatted_paragraph(text, 'NorstBody')
+                    # Regular paragraph
+                    self._add_formatted_paragraph(text)
 
-    def add_cover_page(self, title: str, subtitle: Optional[str] = None,
-                      logo_path: Optional[str] = None):
-        """Add a compact cover section."""
-        if logo_path and Path(logo_path).exists():
-            self.doc.add_picture(logo_path, width=Inches(1.5))  # Smaller logo
-        
+    def add_cover_page(self, title: str, subtitle: Optional[str] = None):
+        """Add a cover page to the document."""
+        # Add title
         title_para = self.doc.add_paragraph(title, style='NorstTitle')
         
+        # Add subtitle if provided
         if subtitle:
             subtitle_para = self.doc.add_paragraph(subtitle, style='NorstSubtitle')
 
-    def add_chart(self, chart_data: Dict[str, Any], chart_type: str = ChartType.BAR,
-                 title: Optional[str] = None, caption: Optional[str] = None,
-                 width: float = 6, height: float = 4, new_page: bool = False):
-        """
-        Add a chart to the document.
-        
-        Args:
-            chart_data: Dictionary containing chart data and configuration
-            chart_type: Type of chart to create (bar, line, pie, etc.)
-            title: Chart title
-            caption: Chart caption or description
-            width: Chart width in inches
-            height: Chart height in inches
-            new_page: Whether to place chart on a new page
-        """
-        global plt, np
-        if plt is None or np is None:
-            try:
-                import matplotlib.pyplot as plt
-                import numpy as np
-            except ImportError:
-                logger.error("matplotlib and numpy are required for chart generation")
-                return
-        
-        if new_page:
-            self.doc.add_page_break()
-        
-        # Create figure with Norstella styling
-        plt.style.use('seaborn')
-        fig, ax = plt.subplots(figsize=(width, height))
-        
-        # Set Norstella colors
-        colors = ['#1F497D', '#445A6A', '#0070C0', '#595959']
-        
-        # Create chart based on type
-        if chart_type == ChartType.BAR:
-            ax.bar(chart_data['x'], chart_data['y'], color=colors[0])
-        elif chart_type == ChartType.LINE:
-            ax.plot(chart_data['x'], chart_data['y'], color=colors[0], linewidth=2, marker='o')
-        elif chart_type == ChartType.PIE:
-            ax.pie(chart_data['values'], labels=chart_data['labels'], colors=colors,
-                  autopct='%1.1f%%', startangle=90)
-        elif chart_type == ChartType.STACKED_BAR:
-            bottom = np.zeros(len(chart_data['x']))
-            for i, y in enumerate(chart_data['y_series']):
-                ax.bar(chart_data['x'], y, bottom=bottom, color=colors[i % len(colors)],
-                      label=chart_data['series_labels'][i])
-                bottom += y
-            ax.legend()
-        elif chart_type == ChartType.HORIZONTAL_BAR:
-            ax.barh(chart_data['y'], chart_data['x'], color=colors[0])
-        
-        # Style the chart
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        if chart_type != ChartType.PIE:
-            ax.grid(True, linestyle='--', alpha=0.7)
-        
-        # Save chart to memory
-        img_stream = io.BytesIO()
-        plt.savefig(img_stream, format='png', dpi=300, bbox_inches='tight')
-        img_stream.seek(0)
-        plt.close()
-        
-        # Add title if provided
-        if title:
-            self.doc.add_paragraph(title, style='NorstChartTitle')
-        
-        # Add chart to document
-        self.doc.add_picture(img_stream, width=Inches(width))
-        
-        # Add caption if provided
-        if caption:
-            self.doc.add_paragraph(caption, style='NorstChartCaption')
-        
-        if new_page:
-            self.doc.add_page_break()
-
-    def add_chart_from_file(self, image_path: str, title: Optional[str] = None,
-                          caption: Optional[str] = None, width: float = 6.0):
-        """
-        Add a chart from an image file to the document.
-        
-        Args:
-            image_path: Path to the image file
-            title: Optional title to display above the chart
-            caption: Optional caption to display below the chart
-            width: Width of the chart in inches
-        """
-        global plt
-        if plt is None:
-            try:
-                import matplotlib.pyplot as plt
-            except ImportError:
-                logger.error("matplotlib is required for chart generation")
-                return
-        
-        if title:
-            title_para = self.doc.add_paragraph(title, style='NorstChartTitle')
-        
-        # Add the image
-        self.doc.add_picture(image_path, width=Inches(width))
-        
-        if caption:
-            caption_para = self.doc.add_paragraph(caption, style='NorstChartCaption')
-        
-        # Add some space after the chart
-        self.doc.add_paragraph()
-
     def save(self, filename: str):
-        """
-        Save the document.
-        
-        Args:
-            filename: Output filename
-        """
+        """Save the document to a file."""
         self.doc.save(filename)
-        logger.info(f"Document saved as {filename}")
 
     def add_formatted_text(self, text: str, style: str = 'NorstBody'):
-        """
-        Add text with markdown formatting converted to Word formatting.
-        
-        Args:
-            text: Text that may contain markdown formatting
-            style: Paragraph style to apply
-        """
+        """Add formatted text to the document."""
         self._add_formatted_paragraph(text, style) 
