@@ -17,14 +17,15 @@ from docx.oxml.ns import qn
 from docx.shared import Twips
 from docx.shared import Length
 
-import matplotlib.pyplot as plt
-import numpy as np
-
 from src.config import TEMPLATE_PATH
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Optional imports for chart features
+plt = None
+np = None
 
 class ChartType:
     """Supported chart types."""
@@ -281,6 +282,15 @@ class ReportGenerator:
             height: Chart height in inches
             new_page: Whether to place chart on a new page
         """
+        global plt, np
+        if plt is None or np is None:
+            try:
+                import matplotlib.pyplot as plt
+                import numpy as np
+            except ImportError:
+                logger.error("matplotlib and numpy are required for chart generation")
+                return
+        
         if new_page:
             self.doc.add_page_break()
         
@@ -346,6 +356,14 @@ class ReportGenerator:
             caption: Optional caption to display below the chart
             width: Width of the chart in inches
         """
+        global plt
+        if plt is None:
+            try:
+                import matplotlib.pyplot as plt
+            except ImportError:
+                logger.error("matplotlib is required for chart generation")
+                return
+        
         if title:
             title_para = self.doc.add_paragraph(title, style='NorstChartTitle')
         
