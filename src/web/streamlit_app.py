@@ -5,6 +5,10 @@ import sys
 import os
 from pathlib import Path
 
+# Override SQLite with pysqlite3 before any other imports
+__import__('pysqlite3')
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
 # Add the project root to the Python path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
