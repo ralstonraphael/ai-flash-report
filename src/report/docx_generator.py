@@ -109,15 +109,117 @@ class ReportGenerator:
         list_style.paragraph_format.left_indent = Inches(0.15)
         list_style.paragraph_format.space_after = Pt(2)
 
+    def _parse_markdown_text(self, text: str, paragraph):
+        """
+        Parse markdown-formatted text and add it to a paragraph with proper Word formatting.
+        
+        Args:
+            text: Text containing markdown formatting
+            paragraph: docx paragraph object to add formatted text to
+        """
+        # Split text by markdown patterns while preserving the delimiters
+        # This regex captures bold (**text**), italic (*text*), and regular text
+        pattern = r'(\*\*.*?\*\*|\*.*?\*|[^*]+)'
+        parts = re.findall(pattern, text)
+        
+        for part in parts:
+            if not part.strip():
+                continue
+                
+            if part.startswith('**') and part.endswith('**'):
+                # Bold text
+                bold_text = part[2:-2]  # Remove ** markers
+                run = paragraph.add_run(bold_text)
+                run.bold = True
+            elif part.startswith('*') and part.endswith('*') and not part.startswith('**'):
+                # Italic text  
+                italic_text = part[1:-1]  # Remove * markers
+                run = paragraph.add_run(italic_text)
+                run.italic = True
+            else:
+                # Regular text
+                paragraph.add_run(part)
+
+    def _add_formatted_paragraph(self, text: str, style: str = 'NorstBody'):
+        """
+        Add a paragraph with markdown formatting converted to Word formatting.
+        
+        Args:
+            text: Text that may contain markdown formatting
+            style: Paragraph style to apply
+        """
+        # Clean up the text first
+        text = text.strip()
+        if not text:
+            return
+        
+        # Create the paragraph
+        paragraph = self.doc.add_paragraph(style=style)
+        
+        # Parse and add the formatted text
+        self._parse_markdown_text(text, paragraph)
+
+    def _process_section_content(self, content: str) -> List[str]:
+        """
+        Process section content and split into paragraphs, handling markdown headers.
+        
+        Args:
+            content: Raw content text with possible markdown formatting
+            
+        Returns:
+            List of processed paragraphs with (type, text) tuples
+        """
+        # Split content into paragraphs
+        paragraphs = content.split('\n\n')
+        processed_paragraphs = []
+        
+        for para in paragraphs:
+            para = para.strip()
+            if not para:
+                continue
+                
+            # Check if this is a markdown header (starts with **)
+            if para.startswith('**') and '**' in para[2:]:
+                # This is a subheader - extract the header text
+                header_match = re.match(r'\*\*(.*?)\*\*(.*)', para, re.DOTALL)
+                if header_match:
+                    header_text = header_match.group(1).strip()
+                    remaining_text = header_match.group(2).strip()
+                    
+                    # Only add header if there's meaningful content following it
+                    if header_text and remaining_text and len(remaining_text) > 20:
+                        processed_paragraphs.append(('header', header_text))
+                        processed_paragraphs.append(('body', remaining_text))
+                    elif header_text and remaining_text:
+                        # If there's a header but minimal content, combine them
+                        combined_text = f"{header_text}: {remaining_text}"
+                        processed_paragraphs.append(('body', combined_text))
+                    elif remaining_text:
+                        # If there's only content, treat as regular paragraph
+                        processed_paragraphs.append(('body', remaining_text))
+                else:
+                    # Fallback - treat as regular text
+                    processed_paragraphs.append(('body', para))
+            else:
+                # Regular paragraph - only add if it has substantial content
+                if len(para) > 10:  # Minimum length threshold
+                    processed_paragraphs.append(('body', para))
+        
+        return processed_paragraphs
+
     def add_section(self, title: str, content: str, max_length: Optional[int] = None):
         """
-        Add a section with length control.
+        Add a section with proper Word formatting instead of markdown.
         
         Args:
             title: Section title
-            content: Section content text
+            content: Section content text (may contain markdown)
             max_length: Maximum number of characters (optional)
         """
+        # Skip sections with no meaningful content
+        if not content or len(content.strip()) < 20:
+            return
+        
         # Add section header
         header = self.doc.add_paragraph(title, style='NorstHeader')
         
@@ -125,16 +227,33 @@ class ReportGenerator:
         if max_length and len(content) > max_length:
             content = content[:max_length-3] + "..."
         
-        # Process and add content
-        paragraphs = content.split('\n\n')
-        for para in paragraphs:
-            if para.strip().startswith(('•', '-', '*')):
-                # Handle bullet points
-                p = self.doc.add_paragraph(style='NorstList')
-                p.add_run('• ' + para.strip()[1:].strip())
-            else:
-                # Regular paragraph
-                self.doc.add_paragraph(para, style='NorstBody')
+        # Process the content to handle markdown formatting
+        processed_content = self._process_section_content(content)
+        
+        # Only add section if there's actual content to display
+        if not processed_content:
+            return
+        
+        for content_type, text in processed_content:
+            if content_type == 'header':
+                # Add as a sub-header with bold formatting
+                sub_header = self.doc.add_paragraph(style='NorstBody')
+                run = sub_header.add_run(text)
+                run.bold = True
+                run.font.size = Pt(10)
+            elif content_type == 'body':
+                # Check if it's a bullet point
+                if text.strip().startswith(('•', '-', '*')):
+                    # Handle bullet points
+                    bullet_text = text.strip()[1:].strip()
+                    if bullet_text:  # Only add if there's actual content
+                        p = self.doc.add_paragraph(style='NorstList')
+                        p.add_run('• ')
+                        self._parse_markdown_text(bullet_text, p)
+                else:
+                    # Regular paragraph with markdown formatting
+                    if text.strip():  # Only add if there's actual content
+                        self._add_formatted_paragraph(text, 'NorstBody')
 
     def add_cover_page(self, title: str, subtitle: Optional[str] = None,
                       logo_path: Optional[str] = None):
@@ -239,60 +358,22 @@ class ReportGenerator:
         # Add some space after the chart
         self.doc.add_paragraph()
 
-    def _clean_markdown(self, text: str) -> str:
-        """Process markdown-style formatting in text."""
-        # Remove headers
-        text = re.sub(r'#+\s+', '', text)
-        
-        # Handle bold text
-        text = re.sub(r'\*\*(.*?)\*\*', lambda m: self._make_bold(m.group(1)), text)
-        
-        # Handle italic text
-        text = re.sub(r'\*(.*?)\*', lambda m: self._make_italic(m.group(1)), text)
-        
-        # Clean up whitespace
-        text = re.sub(r'\n\s*\n', '\n\n', text)
-        text = text.strip()
-        return text
-
-    def _make_bold(self, text: str) -> str:
-        """Mark text for bold formatting."""
-        return f'<b>{text}</b>'
-
-    def _make_italic(self, text: str) -> str:
-        """Mark text for italic formatting."""
-        return f'<i>{text}</i>'
-
     def save(self, filename: str):
         """
-        Save the document with page limit check.
+        Save the document.
         
         Args:
             filename: Output filename
         """
-        # Count pages before saving
         self.doc.save(filename)
-        doc = Document(filename)
+        logger.info(f"Document saved as {filename}")
+
+    def add_formatted_text(self, text: str, style: str = 'NorstBody'):
+        """
+        Add text with markdown formatting converted to Word formatting.
         
-        if len(doc.sections) > 1:
-            # Document is too long, need to truncate
-            logging.warning("Document exceeds one page, truncating content...")
-            self.doc = Document()
-            self._setup_norstella_styles()
-            self._setup_page_layout()
-            
-            # Regenerate with shorter content
-            self.add_cover_page(
-                "Flash Report",
-                f"Generated on {datetime.datetime.now().strftime('%B %d, %Y')}"
-            )
-            
-            # Add sections with reduced content
-            for section in doc.sections[0].text.split('\n\n'):
-                if section.strip():
-                    title = section.split('\n')[0]
-                    content = '\n'.join(section.split('\n')[1:])
-                    self.add_section(title, content, max_length=300)  # Limit each section
-            
-            # Save truncated version
-            self.doc.save(filename) 
+        Args:
+            text: Text that may contain markdown formatting
+            style: Paragraph style to apply
+        """
+        self._add_formatted_paragraph(text, style) 

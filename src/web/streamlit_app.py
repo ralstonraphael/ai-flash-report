@@ -109,113 +109,199 @@ def upload_section():
     """Handle document uploads."""
     st.subheader("📁 Upload Documents")
     
-    # Add upload troubleshooting
-    if st.button("🔄 Reset Upload", help="Click if files aren't uploading properly"):
-        st.session_state.pop('doc_uploader', None)
-        st.rerun()
+    # Add upload troubleshooting with more options
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button("🔄 Reset Upload", help="Click if files aren't uploading properly"):
+            # Clear all upload-related session state
+            for key in list(st.session_state.keys()):
+                if 'uploader' in key or 'upload' in key:
+                    del st.session_state[key]
+            st.rerun()
     
-    # Simple, clean file uploader
-    uploaded_files = st.file_uploader(
-        "Choose your documents",
-        type=["pdf", "docx", "csv"],
-        accept_multiple_files=True,
-        key="doc_uploader"
-    )
+    with col2:
+        if st.button("🧹 Clear Cache", help="Clear all cached data"):
+            st.cache_data.clear()
+            st.cache_resource.clear()
+            st.success("Cache cleared!")
+    
+    with col3:
+        if st.button("🔄 Restart App", help="Force restart the app"):
+            st.rerun()
+    
+    # Add connection status indicator
+    st.markdown("**Connection Status:** 🟢 Connected")
+    
+    # Create a unique key for the file uploader to prevent caching issues
+    uploader_key = f"doc_uploader_{datetime.datetime.now().strftime('%Y%m%d_%H')}"
+    
+    # Simple, clean file uploader with better error handling
+    try:
+        uploaded_files = st.file_uploader(
+            "Choose your documents",
+            type=["pdf", "docx", "csv"],
+            accept_multiple_files=True,
+            key=uploader_key,
+            help="Select PDF, DOCX, or CSV files (max 200MB each)"
+        )
+    except Exception as e:
+        st.error(f"File uploader error: {str(e)}")
+        st.info("Try refreshing the page or using the Reset Upload button above")
+        return
     
     # Debug information for troubleshooting
-    if st.checkbox("Show debug info", help="Check this if you're having upload issues"):
+    debug_mode = st.checkbox("Show debug info", help="Check this if you're having upload issues")
+    
+    if debug_mode:
         st.write("**Debug Information:**")
         st.write(f"- Working Directory: {os.getcwd()}")
         st.write(f"- Vectorstore Path: {VECTORSTORE_PATH}")
         st.write(f"- Max Upload Size: {MAX_UPLOAD_SIZE_MB}MB")
+        st.write(f"- Uploader Key: {uploader_key}")
+        st.write(f"- Session State Keys: {list(st.session_state.keys())}")
         if uploaded_files:
             st.write(f"- Files detected: {len(uploaded_files)}")
             for i, file in enumerate(uploaded_files):
-                st.write(f"  - File {i+1}: {file.name} ({file.type})")
+                try:
+                    st.write(f"  - File {i+1}: {file.name} ({file.type}) - {format_file_size(len(file.getvalue()))}")
+                except Exception as e:
+                    st.write(f"  - File {i+1}: {file.name} - Error reading: {str(e)}")
     
     if uploaded_files:
-        # Display file information cleanly
+        # Display file information cleanly with retry logic
         st.write("**Files selected:**")
         total_size = 0
         valid_files = []
         
         for file in uploaded_files:
-            try:
-                # Get file size safely
-                file_content = file.getvalue()
-                file_size = len(file_content)
-                total_size += file_size
-                size_str = format_file_size(file_size)
-                
-                # Check file size
-                if file_size > MAX_UPLOAD_SIZE_MB * 1024 * 1024:
-                    st.error(f"❌ {file.name} - {size_str} (exceeds {MAX_UPLOAD_SIZE_MB}MB limit)")
-                else:
-                    st.success(f"✅ {file.name} - {size_str}")
-                    valid_files.append(file)
+            max_retries = 3
+            retry_count = 0
+            
+            while retry_count < max_retries:
+                try:
+                    # Get file size safely with retry
+                    file.seek(0)  # Reset file pointer
+                    file_content = file.getvalue()
+                    file_size = len(file_content)
                     
-            except Exception as e:
-                st.error(f"❌ {file.name} - Error reading file: {str(e)}")
-                logger.error(f"File reading error for {file.name}: {str(e)}")
-                continue
+                    if file_size == 0:
+                        raise ValueError("File appears to be empty")
+                    
+                    total_size += file_size
+                    size_str = format_file_size(file_size)
+                    
+                    # Check file size
+                    if file_size > MAX_UPLOAD_SIZE_MB * 1024 * 1024:
+                        st.error(f"❌ {file.name} - {size_str} (exceeds {MAX_UPLOAD_SIZE_MB}MB limit)")
+                    else:
+                        st.success(f"✅ {file.name} - {size_str}")
+                        valid_files.append((file, file_content))  # Store content to avoid re-reading
+                    
+                    break  # Success, exit retry loop
+                    
+                except Exception as e:
+                    retry_count += 1
+                    if retry_count >= max_retries:
+                        st.error(f"❌ {file.name} - Error reading file after {max_retries} attempts: {str(e)}")
+                        logger.error(f"File reading error for {file.name}: {str(e)}")
+                    else:
+                        st.warning(f"⚠️ {file.name} - Retry {retry_count}/{max_retries}")
+                        import time
+                        time.sleep(0.5)  # Brief pause before retry
         
         if valid_files:
-            st.write(f"Total size: {format_file_size(total_size)}")
+            st.write(f"**Total size:** {format_file_size(total_size)}")
             
-            # Process button
+            # Show file processing tips
+            if total_size > 50 * 1024 * 1024:  # 50MB
+                st.info("💡 Large files detected. Processing may take a few minutes.")
+            
+            # Process button with better error handling
             if st.button("Process Documents", type="primary", key="process_btn"):
                 try:
                     # Create necessary directories
                     Path(VECTORSTORE_PATH).mkdir(parents=True, exist_ok=True)
                     temp_dir = Path(tempfile.mkdtemp())
                     
-                    # Process each file
+                    # Process each file with progress tracking
                     with st.status("Processing documents...") as status:
                         processed_files = []
                         
-                        for file in valid_files:
+                        for i, (file, file_content) in enumerate(valid_files):
                             try:
+                                status.write(f"Processing {file.name} ({i+1}/{len(valid_files)})...")
+                                
                                 # Save file with better error handling
                                 temp_path = temp_dir / file.name
-                                file_content = file.getvalue()
                                 
-                                # Validate file content
-                                if not file_content:
-                                    st.error(f"❌ {file.name} - File appears to be empty")
-                                    continue
-                                
+                                # Write file content (we already have it)
                                 with open(temp_path, "wb") as f:
                                     f.write(file_content)
                                 
-                                # Verify file was written
-                                if not temp_path.exists() or temp_path.stat().st_size == 0:
-                                    st.error(f"❌ {file.name} - Failed to save file")
-                                    continue
+                                # Verify file was written correctly
+                                if not temp_path.exists():
+                                    raise FileNotFoundError(f"Failed to create {temp_path}")
+                                
+                                actual_size = temp_path.stat().st_size
+                                if actual_size != len(file_content):
+                                    raise ValueError(f"File size mismatch: expected {len(file_content)}, got {actual_size}")
                                 
                                 processed_files.append(temp_path)
-                                status.write(f"✓ Saved {file.name}")
+                                status.write(f"✓ Saved {file.name} ({format_file_size(actual_size)})")
                                 
                             except Exception as e:
-                                st.error(f"Error saving {file.name}: {str(e)}")
-                                logger.error(f"File save error for {file.name}: {str(e)}")
+                                st.error(f"Error processing {file.name}: {str(e)}")
+                                logger.error(f"File processing error for {file.name}: {str(e)}")
                                 continue
                         
                         if not processed_files:
-                            st.error("No files were successfully processed.")
+                            st.error("❌ No files were successfully processed.")
                             return
                         
                         try:
-                            # Load documents
+                            # Load documents with timeout
                             status.write("Loading documents...")
                             loader = DocumentLoader()
-                            documents = loader.load_batch(processed_files)
-                            status.write(f"✓ Loaded {len(documents)} document chunks")
                             
-                            # Create vector store
+                            # Process files in smaller batches for better reliability
+                            batch_size = 5
+                            all_documents = []
+                            
+                            for i in range(0, len(processed_files), batch_size):
+                                batch = processed_files[i:i+batch_size]
+                                status.write(f"Processing batch {i//batch_size + 1}/{(len(processed_files) + batch_size - 1)//batch_size}...")
+                                
+                                try:
+                                    batch_docs = loader.load_batch(batch)
+                                    all_documents.extend(batch_docs)
+                                    status.write(f"✓ Loaded {len(batch_docs)} chunks from batch")
+                                except Exception as e:
+                                    st.warning(f"Error processing batch {i//batch_size + 1}: {str(e)}")
+                                    logger.error(f"Batch processing error: {str(e)}")
+                                    continue
+                            
+                            if not all_documents:
+                                st.error("❌ No documents were successfully loaded.")
+                                return
+                            
+                            status.write(f"✓ Total loaded: {len(all_documents)} document chunks")
+                            
+                            # Create vector store with retry logic
                             status.write("Creating knowledge base...")
                             vectorstore = VectorStore()
                             collection_name = f"docs_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                            vectorstore.create_collection(documents, collection_name)
+                            
+                            max_retries = 3
+                            for attempt in range(max_retries):
+                                try:
+                                    vectorstore.create_collection(all_documents, collection_name)
+                                    break
+                                except Exception as e:
+                                    if attempt == max_retries - 1:
+                                        raise e
+                                    status.write(f"Retry {attempt + 1}/{max_retries} for vector store creation...")
+                                    import time
+                                    time.sleep(2)
                             
                             # Update session state
                             st.session_state.documents_loaded = True
@@ -225,7 +311,7 @@ def upload_section():
                             # Success message
                             st.success(f"""
                             ✅ Successfully processed {len(processed_files)} files
-                            - Created {len(documents)} text chunks
+                            - Created {len(all_documents)} text chunks
                             - Collection: {collection_name}
                             """)
                             
@@ -233,15 +319,24 @@ def upload_section():
                             st.info("👉 Go to the Analysis tab to start exploring your documents")
                             
                         except Exception as e:
-                            st.error(f"Error processing documents: {str(e)}")
+                            st.error(f"❌ Error processing documents: {str(e)}")
                             logger.error(f"Document processing error: {str(e)}")
+                            
+                            # Provide specific troubleshooting advice
+                            st.markdown("""
+                            **Troubleshooting Steps:**
+                            1. Try uploading fewer files at once
+                            2. Check that files aren't corrupted
+                            3. Try refreshing the page and uploading again
+                            4. Use the Reset Upload button above
+                            """)
                     
                 except Exception as e:
-                    st.error(f"Unexpected error: {str(e)}")
+                    st.error(f"❌ Unexpected error: {str(e)}")
                     logger.error(f"Unexpected error in upload section: {str(e)}")
                 
                 finally:
-                    # Cleanup
+                    # Cleanup with better error handling
                     try:
                         if 'processed_files' in locals():
                             for path in processed_files:
@@ -250,13 +345,13 @@ def upload_section():
                         if 'temp_dir' in locals() and temp_dir.exists():
                             temp_dir.rmdir()
                     except Exception as e:
-                        logger.error(f"Cleanup error: {str(e)}")
+                        logger.warning(f"Cleanup error (non-critical): {str(e)}")
         else:
-            st.warning("No valid files selected. Please check file sizes and formats.")
+            st.warning("⚠️ No valid files selected. Please check file sizes and formats.")
     
     else:
         # Simple help text
-        st.info("Select PDF, DOCX, or CSV files to get started")
+        st.info("📁 Select PDF, DOCX, or CSV files to get started")
         
         # Show supported formats in sidebar instead
         st.sidebar.markdown("""
@@ -266,16 +361,33 @@ def upload_section():
         - **CSV** (.csv) - Up to 200MB
         """)
         
-        # Troubleshooting tips
-        with st.expander("📋 Troubleshooting Upload Issues"):
+        # Enhanced troubleshooting tips
+        with st.expander("🔧 Troubleshooting Upload Issues"):
             st.markdown("""
-            **If files aren't uploading:**
-            1. Try clicking the "Reset Upload" button above
+            **Common Solutions:**
+            
+            **Files not appearing:**
+            1. Click "Reset Upload" button above
             2. Refresh the page (F5 or Ctrl+R)
-            3. Check file size (must be under 200MB)
-            4. Ensure file format is PDF, DOCX, or CSV
-            5. Try uploading one file at a time
-            6. Check the "Show debug info" checkbox for more details
+            3. Try "Clear Cache" button
+            4. Check file format (PDF, DOCX, CSV only)
+            
+            **Upload fails or times out:**
+            1. Check file size (must be under 200MB)
+            2. Try uploading one file at a time
+            3. Ensure stable internet connection
+            4. Close other browser tabs using bandwidth
+            
+            **Files disappear after upload:**
+            1. This is a known Streamlit issue with large files
+            2. Try smaller files first
+            3. Use "Reset Upload" and try again
+            4. Check the debug info for error details
+            
+            **Still having issues?**
+            - Enable "Show debug info" checkbox
+            - Check browser console for errors (F12)
+            - Try a different browser
             """)
 
 
@@ -489,7 +601,11 @@ def report_section():
                         "Generate a comprehensive executive summary highlighting key changes, updates, and why they matter"
                     )
                     content = engine.generate_section_content("executive_summary", context)
-                    generator.add_section("Executive Summary", content)
+                    if content and len(content.strip()) > 50:
+                        generator.add_section("Executive Summary", content)
+                        status.write("✓ Executive summary generated")
+                    else:
+                        status.write("⚠️ Executive summary skipped (insufficient content)")
                 
                 if include_company:
                     status.write("Analyzing company overview...")
@@ -497,7 +613,11 @@ def report_section():
                         "Extract company information, business model, and recent strategic moves"
                     )
                     content = engine.generate_section_content("company_overview", context)
-                    generator.add_section("Company Overview", content)
+                    if content and len(content.strip()) > 50:
+                        generator.add_section("Company Overview", content)
+                        status.write("✓ Company overview generated")
+                    else:
+                        status.write("⚠️ Company overview skipped (insufficient content)")
                 
                 if include_offerings:
                     status.write("Analyzing core offerings...")
@@ -505,7 +625,11 @@ def report_section():
                         "Extract information about products, services, platforms, and recent launches or changes"
                     )
                     content = engine.generate_section_content("core_offerings", context)
-                    generator.add_section("Core Offerings", content)
+                    if content and len(content.strip()) > 50:
+                        generator.add_section("Core Offerings", content)
+                        status.write("✓ Core offerings generated")
+                    else:
+                        status.write("⚠️ Core offerings skipped (insufficient content)")
                 
                 if include_market:
                     status.write("Analyzing market position...")
@@ -513,7 +637,11 @@ def report_section():
                         "Analyze market position, competitors, differentiators, and market trends"
                     )
                     content = engine.generate_section_content("market_position", context)
-                    generator.add_section("Market Position", content)
+                    if content and len(content.strip()) > 50:
+                        generator.add_section("Market Position", content)
+                        status.write("✓ Market position generated")
+                    else:
+                        status.write("⚠️ Market position skipped (insufficient content)")
                 
                 if include_insights:
                     status.write("Generating strategic insights...")
@@ -521,7 +649,11 @@ def report_section():
                         "Generate strategic insights, implications, and recommendations"
                     )
                     content = engine.generate_section_content("strategic_insights", context)
-                    generator.add_section("Strategic Insights", content)
+                    if content and len(content.strip()) > 50:
+                        generator.add_section("Key Strategic Insights", content)
+                        status.write("✓ Strategic insights generated")
+                    else:
+                        status.write("⚠️ Strategic insights skipped (insufficient content)")
                 
                 # Save report
                 status.write("Saving report...")

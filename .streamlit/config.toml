@@ -1,7 +1,9 @@
 [server]
-# Set maximum upload size to 200MB (default is 200MB, but being explicit)
-# This allows for large PDFs including 19-page documents
+# Set maximum upload size to 200MB
 maxUploadSize = 200
+
+# Increase message size for large uploads
+maxMessageSize = 200
 
 # Enable file watching for development
 fileWatcherType = "auto"
@@ -9,13 +11,16 @@ fileWatcherType = "auto"
 # Set port
 port = 8501
 
+# Disable XSRF protection to allow CORS (fixes the warning)
+enableXsrfProtection = false
+
 [browser]
-# Automatically open browser when starting
+# Don't gather usage stats
 gatherUsageStats = false
 
 [theme]
-# Optional: Set theme colors
-primaryColor = "#1F497D"  # Norstella Blue
+# Norstella brand colors
+primaryColor = "#1F497D"
 backgroundColor = "#FFFFFF"
 secondaryBackgroundColor = "#F0F2F6"
 textColor = "#262730" 

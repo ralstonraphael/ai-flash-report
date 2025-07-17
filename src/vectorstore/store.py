@@ -7,6 +7,7 @@ import re
 import uuid
 import logging
 import warnings
+import shutil
 
 # Filter deprecation warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -37,10 +38,23 @@ class VectorStore:
         self.embedding_function = embedding_function or OpenAIEmbeddings()
         self.persist_dir = str(persist_dir)  # Convert Path to string for ChromaDB
         self.current_collection = None
+        
+        # Ensure the persist directory exists
+        Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
 
     def _clean_collection_name(self, name: str) -> str:
         """Clean collection name to be compatible with ChromaDB."""
         return re.sub(r'[^a-zA-Z0-9_\-]', '_', name)
+
+    def _reset_database(self):
+        """Reset the ChromaDB database by removing all files."""
+        try:
+            if Path(self.persist_dir).exists():
+                shutil.rmtree(self.persist_dir)
+                logger.info(f"Reset ChromaDB database at {self.persist_dir}")
+            Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            logger.error(f"Failed to reset database: {str(e)}")
 
     def create_collection(self, documents: List[LangChainDocument],
                         collection_name: str) -> Chroma:
@@ -48,25 +62,44 @@ class VectorStore:
         Create a new vector store collection from documents.
         
         Args:
-            documents: List of LangChain documents to embed
+            documents: List of LangChain documents to add
             collection_name: Name for the collection
             
         Returns:
-            ChromaDB collection instance
+            Chroma vector store instance
         """
-        # Deduplicate documents
-        unique_docs = self._deduplicate_documents(documents)
+        if not documents:
+            raise ValueError("No documents provided")
         
-        # Create collection
-        collection = Chroma.from_documents(
-            documents=unique_docs,
-            embedding=self.embedding_function,
-            collection_name=self._clean_collection_name(collection_name),
-            persist_directory=self.persist_dir
-        )
-        self.current_collection = collection
-        logger.info(f"Created collection: {collection_name}")
-        return collection
+        # Clean collection name
+        clean_name = self._clean_collection_name(collection_name)
+        logger.info(f"Creating collection '{clean_name}' with {len(documents)} documents")
+        
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Create ChromaDB collection
+                self.current_collection = Chroma.from_documents(
+                    documents=documents,
+                    embedding=self.embedding_function,
+                    persist_directory=self.persist_dir,
+                    collection_name=clean_name
+                )
+                
+                logger.info(f"Successfully created collection '{clean_name}'")
+                return self.current_collection
+                
+            except Exception as e:
+                logger.error(f"Attempt {attempt + 1} failed: {str(e)}")
+                
+                if "no such table: tenants" in str(e) or "Database error" in str(e):
+                    logger.warning("Database corruption detected, resetting...")
+                    self._reset_database()
+                    
+                if attempt == max_retries - 1:
+                    raise Exception(f"Failed to create collection after {max_retries} attempts: {str(e)}")
+                    
+        return None
 
     def load_collection(self, collection_name: str) -> Chroma:
         """

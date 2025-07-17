@@ -231,133 +231,133 @@ class QueryEngine:
         """
         prompts = {
             "executive_summary": """
-                Generate a comprehensive executive summary that covers all key aspects.
+                Generate a comprehensive executive summary with complete, substantive content.
                 
                 CRITICAL REQUIREMENTS:
-                1. Write 4-5 full paragraphs with complete sentences - NO abbreviations or trailing dots
+                1. Write 4-5 full paragraphs (minimum 100 words each)
                 2. Use the actual company name from the context - NEVER use "The company" or generic terms
                 3. Include specific details, numbers, dates, and examples from the context
-                4. Write in full, complete sentences with proper conclusions
-                5. Each paragraph should be 4-6 sentences long
+                4. Write in complete sentences with proper conclusions
+                5. Do NOT use markdown headers or bullet points
+                6. Write as flowing narrative paragraphs
                 
-                Structure your response:
+                Write a comprehensive executive summary covering:
                 
-                **Strategic Overview**
-                Write 2 detailed paragraphs covering the company's current strategic position, recent major developments, and their significance. Include specific company names, dates, financial figures, and strategic implications.
+                First paragraph: Current strategic position and recent major developments with specific company names, dates, and financial figures.
                 
-                **Key Developments and Changes**
-                Write 1-2 paragraphs detailing specific recent developments, launches, acquisitions, partnerships, or strategic moves. Be specific about what happened, when, and why it matters for the business.
+                Second paragraph: Key business developments, launches, acquisitions, partnerships, or strategic moves with detailed explanations of their significance.
                 
-                **Market Impact and Implications**
-                Write 1 paragraph analyzing what these developments mean for the company's competitive position, market opportunities, and future growth prospects.
+                Third paragraph: Market impact and competitive implications of these developments.
+                
+                Fourth paragraph: Future outlook and strategic implications for the company's growth prospects.
                 
                 Context: {context}
                 
-                Remember: Write complete, full sentences. Use specific company names. Provide rich detail and supporting evidence.
+                Remember: Write complete paragraphs without headers. Use specific company names and detailed supporting evidence.
             """,
             
             "company_overview": """
-                Provide a comprehensive company overview with detailed analysis.
+                Provide a comprehensive company overview with detailed analysis in paragraph form.
                 
                 CRITICAL REQUIREMENTS:
-                1. Write 4-5 full paragraphs with complete sentences - NO abbreviations or trailing dots
+                1. Write 4-5 full paragraphs (minimum 100 words each)
                 2. Use the actual company name from the context - NEVER use "The company" or generic terms
                 3. Include specific details about business model, operations, and strategy
-                4. Write in full, complete sentences with proper conclusions
-                5. Each paragraph should be 4-6 sentences long
+                4. Write in complete sentences with proper conclusions
+                5. Do NOT use markdown headers or bullet points
+                6. Write as flowing narrative paragraphs
                 
-                Structure your response:
+                Write a comprehensive company overview covering:
                 
-                **Business Model and Core Operations**
-                Write 1-2 detailed paragraphs explaining how the company makes money, its primary business segments, and operational structure. Include specific revenue streams and business activities.
+                First paragraph: Business model, core operations, and how the company generates revenue with specific details about business segments.
                 
-                **Historical Development and Recent Milestones**
-                Write 1 paragraph covering the company's evolution, key milestones, and recent strategic developments that have shaped its current position.
+                Second paragraph: Historical development, key milestones, and recent strategic developments that have shaped the current position.
                 
-                **Current Market Position and Strategy**
-                Write 1-2 paragraphs analyzing the company's current market position, competitive advantages, and strategic direction. Include specific examples of how they compete and differentiate.
+                Third paragraph: Current market position, competitive advantages, and strategic direction with specific examples.
+                
+                Fourth paragraph: Operational structure, key capabilities, and how the company differentiates itself in the market.
                 
                 Context: {context}
                 
-                Remember: Write complete, full sentences. Use specific company names. Include detailed examples and analysis.
+                Remember: Write complete paragraphs without headers. Use specific company names and detailed examples.
             """,
             
             "core_offerings": """
-                Provide a detailed analysis of the company's products and services.
+                Provide a detailed analysis of the company's products and services in paragraph form.
                 
                 CRITICAL REQUIREMENTS:
-                1. Write 4-5 full paragraphs with complete sentences - NO abbreviations or trailing dots
+                1. Write 4-5 full paragraphs (minimum 100 words each)
                 2. Use the actual company name from the context - NEVER use "The company" or generic terms
                 3. Include specific details about products, features, and market reception
-                4. Write in full, complete sentences with proper conclusions
-                5. Each paragraph should be 4-6 sentences long
+                4. Write in complete sentences with proper conclusions
+                5. Do NOT use markdown headers or bullet points
+                6. Write as flowing narrative paragraphs
                 
-                Structure your response:
+                Write a detailed analysis covering:
                 
-                **Primary Products and Services Portfolio**
-                Write 1-2 detailed paragraphs covering the company's main products and services, their key features, and how they serve different customer segments. Include specific product names and capabilities.
+                First paragraph: Primary products and services portfolio with specific product names, features, and how they serve different customer segments.
                 
-                **Recent Innovations and Developments**
-                Write 1-2 paragraphs detailing recent product launches, updates, innovations, or service enhancements. Explain what's new and why it matters for customers and the business.
+                Second paragraph: Recent product launches, updates, innovations, or service enhancements with detailed explanations of new features and capabilities.
                 
-                **Market Reception and Competitive Advantages**
-                Write 1 paragraph analyzing how the market has received these offerings, customer feedback, and what competitive advantages they provide.
+                Third paragraph: Market reception, customer feedback, and adoption rates for key products and services.
+                
+                Fourth paragraph: Competitive advantages these offerings provide and how they position the company in the market.
                 
                 Context: {context}
                 
-                Remember: Write complete, full sentences. Use specific company names. Include detailed product information and market analysis.
+                Remember: Write complete paragraphs without headers. Use specific product names and detailed market analysis.
             """,
             
             "market_position": """
-                Deliver a thorough analysis of the company's market position and competitive landscape.
+                Deliver a thorough analysis of the company's market position and competitive landscape in paragraph form.
                 
                 CRITICAL REQUIREMENTS:
-                1. Write 4-5 full paragraphs with complete sentences - NO abbreviations or trailing dots
+                1. Write 4-5 full paragraphs (minimum 100 words each)
                 2. Use the actual company name from the context - NEVER use "The company" or generic terms
                 3. Include specific details about market share, competitors, and positioning
-                4. Write in full, complete sentences with proper conclusions
-                5. Each paragraph should be 4-6 sentences long
+                4. Write in complete sentences with proper conclusions
+                5. Do NOT use markdown headers or bullet points
+                6. Write as flowing narrative paragraphs
                 
-                Structure your response:
+                Write a thorough market analysis covering:
                 
-                **Market Share and Competitive Standing**
-                Write 1-2 detailed paragraphs analyzing the company's market share, how it compares to key competitors, and its overall competitive standing. Include specific market data and competitor comparisons.
+                First paragraph: Market share, competitive standing, and how the company compares to key competitors with specific market data and competitor names.
                 
-                **Key Differentiators and Competitive Advantages**
-                Write 1 paragraph detailing what sets the company apart from competitors, its unique value propositions, and sustainable competitive advantages.
+                Second paragraph: Key differentiators, unique value propositions, and sustainable competitive advantages that set the company apart.
                 
-                **Market Trends and Dynamics**
-                Write 1-2 paragraphs covering current market trends, industry dynamics, and how the company is positioned to capitalize on or respond to these changes.
+                Third paragraph: Current market trends, industry dynamics, and how these affect the competitive landscape.
+                
+                Fourth paragraph: The company's positioning strategy and how it's adapting to capitalize on market opportunities or respond to challenges.
                 
                 Context: {context}
                 
-                Remember: Write complete, full sentences. Use specific company names. Support analysis with specific data and examples.
+                Remember: Write complete paragraphs without headers. Support analysis with specific data and competitor examples.
             """,
             
             "strategic_insights": """
-                Provide comprehensive strategic insights and recommendations.
+                Provide comprehensive strategic insights and recommendations in paragraph form.
                 
                 CRITICAL REQUIREMENTS:
-                1. Write 4-5 full paragraphs with complete sentences - NO abbreviations or trailing dots
+                1. Write 4-5 full paragraphs (minimum 100 words each)
                 2. Use the actual company name from the context - NEVER use "The company" or generic terms
                 3. Include specific, actionable recommendations with supporting rationale
-                4. Write in full, complete sentences with proper conclusions
-                5. Each paragraph should be 4-6 sentences long
+                4. Write in complete sentences with proper conclusions
+                5. Do NOT use markdown headers or bullet points
+                6. Write as flowing narrative paragraphs
                 
-                Structure your response:
+                Write comprehensive strategic insights covering:
                 
-                **Strategic Strengths and Opportunities**
-                Write 1-2 detailed paragraphs analyzing the company's key strategic strengths and market opportunities. Include specific examples and explain how these can be leveraged for growth.
+                First paragraph: Key strategic strengths and market opportunities with specific examples and explanations of how these can be leveraged for growth.
                 
-                **Challenges and Risk Factors**
-                Write 1 paragraph identifying key challenges, competitive threats, and risk factors that could impact the company's performance or strategic objectives.
+                Second paragraph: Primary challenges, competitive threats, and risk factors that could impact performance or strategic objectives.
                 
-                **Strategic Recommendations and Action Items**
-                Write 1-2 paragraphs providing specific, actionable strategic recommendations. Include detailed rationale for each recommendation and explain how it addresses identified opportunities or challenges.
+                Third paragraph: Strategic recommendations for capitalizing on opportunities, including specific actions and their expected benefits.
+                
+                Fourth paragraph: Risk mitigation strategies and recommendations for addressing identified challenges and threats.
                 
                 Context: {context}
                 
-                Remember: Write complete, full sentences. Use specific company names. Include detailed, actionable recommendations with supporting analysis.
+                Remember: Write complete paragraphs without headers. Include detailed, actionable recommendations with supporting analysis.
             """
         }
         

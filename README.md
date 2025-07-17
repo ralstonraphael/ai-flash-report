@@ -1,4 +1,4 @@
-# 📊 Flash Report Generator
+# 📊 AI Flash Report Generator
 
 An AI-powered competitive intelligence tool that generates insightful reports from corporate documents using RAG (Retrieval Augmented Generation).
 
@@ -23,8 +23,8 @@ An AI-powered competitive intelligence tool that generates insightful reports fr
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/flash-report-generator.git
-cd flash-report-generator
+git clone https://github.com/yourusername/ai-flash-report.git
+cd ai-flash-report
 ```
 
 2. Create a virtual environment:
@@ -49,18 +49,62 @@ cp .env.example .env
 
 ### Running the Application
 
-1. Start the Streamlit interface:
+#### Local Development
 
 ```bash
 streamlit run src/web/streamlit_app.py
 ```
 
-2. Open your browser and navigate to `http://localhost:8501`
+#### Using the run script
+
+```bash
+python run_app.py
+```
+
+Open your browser and navigate to `http://localhost:8501`
+
+## 🌐 Deployment to Streamlit Cloud
+
+### Prerequisites for Deployment
+
+1. **GitHub Repository**: Push your code to a GitHub repository
+2. **OpenAI API Key**: Have your OpenAI API key ready
+
+### Deployment Steps
+
+1. **Go to [Streamlit Cloud](https://streamlit.io/cloud)**
+2. **Connect your GitHub account**
+3. **Deploy new app**:
+   - Repository: `your-username/ai-flash-report`
+   - Branch: `main`
+   - Main file path: `src/web/streamlit_app.py`
+4. **Configure secrets**:
+   - Go to your app settings
+   - Add secret: `OPENAI_API_KEY = "your_actual_api_key_here"`
+5. **Deploy**
+
+### Environment Configuration
+
+The app supports both local `.env` files and Streamlit Cloud secrets:
+
+**Local Development:**
+
+```bash
+# .env file
+OPENAI_API_KEY=your_key_here
+```
+
+**Streamlit Cloud:**
+
+```toml
+# In app settings -> Secrets
+OPENAI_API_KEY = "your_key_here"
+```
 
 ## 📁 Project Structure
 
 ```
-flash-report-generator/
+ai-flash-report/
 ├── src/
 │   ├── ingestion/           # Document loading and processing
 │   ├── vectorstore/         # Vector database management
@@ -69,14 +113,15 @@ flash-report-generator/
 │   ├── web/                # Streamlit interface
 │   └── config.py           # Configuration settings
 ├── templates/              # Report templates and assets
-├── notebooks/             # Development notebooks
-├── tests/                 # Test suite
-└── requirements.txt       # Project dependencies
+├── .streamlit/            # Streamlit configuration
+├── requirements.txt       # Project dependencies
+├── run_app.py            # Application runner
+└── README.md             # This file
 ```
 
 ## 🔧 Configuration
 
-Key settings in `config.py`:
+Key settings in `src/config.py`:
 
 - Document chunk size and overlap
 - OpenAI model selection
@@ -84,7 +129,7 @@ Key settings in `config.py`:
 - Report styling options
 - Evaluation metrics
 
-## 💡 Usage Examples
+## 💡 Usage
 
 1. **Upload Documents**:
 
@@ -99,16 +144,30 @@ Key settings in `config.py`:
 
 3. **Generate Reports**:
    - Set report title and options
-   - Click "Generate DOCX Report"
-   - Download the formatted document
+   - Click "Generate Report"
+   - Download the formatted DOCX document
 
-## 🧪 Testing
+## 🚨 Important Notes
 
-Run the test suite:
+- **File Size Limit**: 200MB per file
+- **Supported Formats**: PDF, DOCX, CSV
+- **OpenAI API**: Requires valid API key with sufficient credits
+- **Memory Usage**: Large documents may require significant processing time
 
-```bash
-pytest tests/
-```
+## 🛠️ Troubleshooting
+
+### Common Issues
+
+1. **API Key Errors**: Ensure your OpenAI API key is valid and has credits
+2. **File Upload Issues**: Try smaller files or refresh the page
+3. **Processing Timeouts**: Large documents may take several minutes
+4. **Memory Issues**: Restart the app if it becomes unresponsive
+
+### For Streamlit Cloud Deployment
+
+1. **Build Errors**: Check that all dependencies are in requirements.txt
+2. **Secret Issues**: Verify API key is correctly set in app settings
+3. **Performance**: Streamlit Cloud has resource limits for free tier
 
 ## 🤝 Contributing
 
@@ -120,10 +179,11 @@ pytest tests/
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License.
 
 ## 🙏 Acknowledgments
 
 - Built with [LangChain](https://github.com/hwchase17/langchain)
 - Vector storage by [ChromaDB](https://github.com/chroma-core/chroma)
 - Document processing with [Docling](https://github.com/docling/docling)
+- UI powered by [Streamlit](https://streamlit.io/)
