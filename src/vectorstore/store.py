@@ -35,16 +35,17 @@ class VectorStore:
         
         Args:
             embedding_function: OpenAI embeddings instance (will create if None)
-            persist_dir: Directory to persist ChromaDB files (not used in in-memory mode)
+            persist_dir: Directory to persist ChromaDB files
         """
         self.embedding_function = embedding_function or OpenAIEmbeddings()
-        self.persist_dir = str(persist_dir)  # Keep for reference but not used
+        self.persist_dir = str(persist_dir)
         self.current_collection = None
         
-        # Configure ChromaDB to use in-memory storage
+        # Configure ChromaDB with minimal settings
         self.client = chromadb.Client(Settings(
-            is_persistent=False,  # Use in-memory storage
-            anonymized_telemetry=False
+            anonymized_telemetry=False,
+            allow_reset=True,
+            is_persistent=False
         ))
 
     def _clean_collection_name(self, name: str) -> str:
@@ -71,7 +72,7 @@ class VectorStore:
         logger.info(f"Creating collection '{clean_name}' with {len(documents)} documents")
         
         try:
-            # Create ChromaDB collection using in-memory client
+            # Create ChromaDB collection
             self.current_collection = Chroma.from_documents(
                 documents=documents,
                 embedding=self.embedding_function,
@@ -81,7 +82,7 @@ class VectorStore:
             
             logger.info(f"Successfully created collection '{clean_name}'")
             return self.current_collection
-                
+            
         except Exception as e:
             logger.error(f"Failed to create collection: {str(e)}")
             raise
@@ -144,7 +145,8 @@ class VectorStore:
             search_type="mmr",
             search_kwargs={
                 "k": k,
-                "lambda_mult": lambda_mult
+                "lambda_mult": lambda_mult,
+                "fetch_k": k * 2  # Fetch more candidates for better diversity
             }
         )
 
@@ -167,8 +169,8 @@ class VectorStore:
         logger.info(f"Querying collection with: {query}")
         retriever = self.get_mmr_retriever(k=k, lambda_mult=lambda_mult)
         
-        # Use invoke() instead of get_relevant_documents()
-        results = retriever.invoke(query)
+        # Use get_relevant_documents() for older ChromaDB versions
+        results = retriever.get_relevant_documents(query)
         
         logger.info(f"Found {len(results)} relevant documents")
         return [doc.page_content for doc in results] 

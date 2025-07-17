@@ -14,7 +14,7 @@ docling==2.36.1
 docling-core==2.37.0
 
 # Vector Storage
-chromadb==1.0.12
+chromadb==0.4.22
 tiktoken==0.9.0
 
 # Web UI
