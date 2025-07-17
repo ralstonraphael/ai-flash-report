@@ -4,17 +4,25 @@ Streamlit web interface for the Flash Report Generator.
 import sys
 import os
 from pathlib import Path
+import logging
 
-# Override SQLite with pysqlite3 before any other imports
-__import__('pysqlite3')
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+# Set up logging first
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Try to use pysqlite3 if available, otherwise continue with default sqlite3
+try:
+    import pysqlite3
+    sys.modules['sqlite3'] = pysqlite3
+    logger.info("Using pysqlite3 for better SQLite compatibility")
+except ImportError:
+    logger.warning("pysqlite3 not available, using default sqlite3")
 
 # Add the project root to the Python path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 import streamlit as st
 import tempfile
-import logging
 import warnings
 import datetime
 import re
@@ -32,8 +40,8 @@ st.set_page_config(
 MAX_UPLOAD_SIZE_MB = 200
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# logging.basicConfig(level=logging.INFO) # This line is now redundant as it's handled above
+# logger = logging.getLogger(__name__) # This line is now redundant as it's handled above
 
 # Disable specific loggers
 logging.getLogger("chromadb.telemetry").setLevel(logging.ERROR)
