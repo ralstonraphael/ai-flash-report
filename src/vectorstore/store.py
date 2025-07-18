@@ -1,6 +1,11 @@
 """
 Vector store module for document embeddings and retrieval using ChromaDB.
 """
+# SQLite override for Streamlit Cloud compatibility
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
 from pathlib import Path
 from typing import List, Optional, Union, Dict, Any
 import re
@@ -102,7 +107,7 @@ class VectorStore:
             collection.add(
                 embeddings=embeddings_array.tolist(),
                 documents=texts,
-                metadatas=metadatas,
+                metadatas=metadatas,  # type: ignore
                 ids=ids
             )
             

@@ -1,6 +1,11 @@
 """
 Streamlit web interface for the Flash Report Generator.
 """
+# SQLite override for Streamlit Cloud compatibility
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
 import sys
 import os
 from pathlib import Path

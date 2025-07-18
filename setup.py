@@ -20,6 +20,7 @@ setup(
         "pandas>=2.3.0",
         "docling>=2.36.1",
         "chromadb==0.4.22",
+        "pysqlite3-binary>=0.5.2",
         "streamlit>=1.45.1",
     ],
     python_requires=">=3.8",
