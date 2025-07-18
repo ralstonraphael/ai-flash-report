@@ -2,9 +2,18 @@
 Vector store module for document embeddings and retrieval using ChromaDB.
 """
 # SQLite override for Streamlit Cloud compatibility
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+try:
+    __import__('pysqlite3')
+    import sys
+    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+    print("Successfully overridden sqlite3 with pysqlite3")
+except ImportError as e:
+    print("pysqlite3 is not installed or failed to import:", e)
+    print("Falling back to system sqlite3")
+
+# Check SQLite version
+import sqlite3
+print(f"SQLite version: {sqlite3.sqlite_version}")
 
 from pathlib import Path
 from typing import List, Optional, Union, Dict, Any
