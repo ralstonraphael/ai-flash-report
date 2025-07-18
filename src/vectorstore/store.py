@@ -68,6 +68,8 @@ class VectorStore:
                 )
             )
             logger.info("Successfully initialized ChromaDB Cloud client")
+            logger.info(f"CHROMA CLIENT TYPE: {type(self.client)}")
+            logger.info(f"CHROMA CLIENT CLASS: {self.client.__class__.__name__}")
         except Exception as e:
             logger.error(f"Failed to initialize ChromaDB Cloud client: {str(e)}")
             raise
@@ -97,7 +99,9 @@ class VectorStore:
         
         try:
             # Get or create collection using native API
+            logger.info("Creating collection using native ChromaDB API...")
             collection = self.client.get_or_create_collection(name=clean_name)
+            logger.info(f"Collection created/retrieved: {type(collection)}")
             
             # Prepare documents for ChromaDB
             texts = [doc.page_content for doc in documents]
@@ -112,7 +116,7 @@ class VectorStore:
             embeddings_array = np.array(embeddings)
             
             # Add documents to collection
-            logger.info("Adding documents to collection...")
+            logger.info("Adding documents to collection using native API...")
             collection.add(
                 embeddings=embeddings_array.tolist(),
                 documents=texts,
