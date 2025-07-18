@@ -15,10 +15,7 @@ docling-core==2.37.0
 
 # Vector Storage
 chromadb==0.4.22
-chromadb-server>=0.1.0  # Server component for ChromaDB
 tiktoken==0.9.0
-sqlite-vss>=0.1.2  # Provides newer SQLite with vector search support
-pysqlite3-binary>=0.5.1  # Modern SQLite build required by ChromaDB
 
 # Web UI
 streamlit==1.45.1
