@@ -42,15 +42,27 @@ class VectorStore:
         self.persist_dir = str(persist_dir)
         self.current_collection = None
         
-        # Configure ChromaDB to use HTTP client mode
-        self.client = chromadb.HttpClient(
-            host="localhost",
-            port=8000,
-            settings=Settings(
-                anonymized_telemetry=False,
-                allow_reset=True
+        # Configure ChromaDB to use HTTP client (in-memory mode)
+        try:
+            logger.info("Initializing ChromaDB HTTP client...")
+            self.client = chromadb.HttpClient(
+                host="localhost",
+                port=8000,
+                settings=Settings(
+                    anonymized_telemetry=False,
+                    allow_reset=True
+                )
             )
-        )
+            logger.info("Successfully initialized ChromaDB HTTP client")
+        except Exception as e:
+            logger.error(f"Failed to initialize ChromaDB HTTP client: {str(e)}")
+            # Fallback to in-memory client
+            logger.info("Falling back to in-memory ChromaDB client...")
+            self.client = chromadb.Client(Settings(
+                anonymized_telemetry=False,
+                allow_reset=True,
+                is_persistent=False
+            ))
 
     def _clean_collection_name(self, name: str) -> str:
         """Clean collection name to be compatible with ChromaDB."""
@@ -76,7 +88,8 @@ class VectorStore:
         logger.info(f"Creating collection '{clean_name}' with {len(documents)} documents")
         
         try:
-            # Create ChromaDB collection
+            # Create ChromaDB collection using client
+            logger.info("Creating ChromaDB collection...")
             self.current_collection = Chroma.from_documents(
                 documents=documents,
                 embedding=self.embedding_function,
