@@ -43,7 +43,7 @@ CHUNK_OVERLAP = 200
 # OpenAI settings
 OPENAI_API_KEY = get_config_value("OPENAI_API_KEY")
 OPENAI_MODEL = get_config_value("OPENAI_MODEL", "gpt-4")  # or gpt-3.5-turbo for faster, cheaper processing
-OPENAI_EMBEDDING_MODEL = get_config_value("OPENAI_EMBEDDING_MODEL", "text-embedding-ada-002")
+OPENAI_EMBEDDING_MODEL = get_config_value("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
 
 # Vector store settings
 COLLECTION_PREFIX = "flash_report_"

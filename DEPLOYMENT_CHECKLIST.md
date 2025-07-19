@@ -52,12 +52,9 @@
 
 - [ ] In app settings, add secrets:
   ```
-  OPENAI_API_KEY = "your_actual_api_key_here"
-  ```
-- [ ] Optionally configure model settings:
-  ```
-  OPENAI_MODEL = "gpt-4"
-  OPENAI_EMBEDDING_MODEL = "text-embedding-ada-002"
+  OPENAI_API_KEY = "your-openai-api-key-here"
+  OPENAI_MODEL = "gpt-4"  # or gpt-3.5-turbo for faster processing
+  OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
   ```
 
 ### 3. Test Deployment
