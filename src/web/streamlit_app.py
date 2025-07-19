@@ -36,8 +36,15 @@ MAX_UPLOAD_SIZE_MB = 200
 # logger = logging.getLogger(__name__) # This line is now redundant as it's handled above
 
 # Disable specific loggers
-logging.getLogger("chromadb.telemetry").setLevel(logging.ERROR)
+
 logging.getLogger("torch").setLevel(logging.ERROR)
+
+# Suppress verbose logging
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("openai").setLevel(logging.WARNING)
+logging.getLogger("langchain").setLevel(logging.WARNING)
 
 # Filter out warnings more comprehensively
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -51,7 +58,6 @@ warnings.filterwarnings("ignore", message=".*CT_Style.*")
 
 # Set environment variables
 os.environ["ANONYMIZED_TELEMETRY"] = "False"
-os.environ["CHROMADB_TELEMETRY"] = "False"
 
 # Configure event loop policy for macOS
 import asyncio

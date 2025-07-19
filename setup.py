@@ -19,7 +19,7 @@ setup(
         "pypdf>=5.6.0",
         "pandas>=2.3.0",
         "docling>=2.36.1",
-        "chromadb==0.4.22",
+        "pinecone-client==3.0.0",
         "streamlit>=1.45.1",
     ],
     python_requires=">=3.8",

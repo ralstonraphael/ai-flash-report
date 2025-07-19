@@ -48,13 +48,20 @@
   - Branch: `main`
   - Main file: `src/web/streamlit_app.py`
 
-### 2. Configure Secrets
+### 4. Configure Secrets
 
 - [ ] In app settings, add secrets:
+
   ```
+  # OpenAI Configuration
   OPENAI_API_KEY = "your-openai-api-key-here"
   OPENAI_MODEL = "gpt-4"  # or gpt-3.5-turbo for faster processing
   OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
+
+  # Pinecone Configuration
+  PINECONE_API_KEY = "your-pinecone-api-key-here"
+  PINECONE_ENVIRONMENT = "us-east-1-aws"
+  PINECONE_INDEX = "flash-report-index"
   ```
 
 ### 3. Test Deployment
@@ -128,7 +135,7 @@ ai-flash-report/
 ## Key Features Ready for Production
 
 ✅ **Document Processing**: PDF, DOCX, CSV support via Docling
-✅ **Vector Storage**: ChromaDB with OpenAI embeddings
+✅ **Vector Storage**: Pinecone with OpenAI embeddings
 ✅ **AI Analysis**: GPT-4 powered query engine with multiple intents
 ✅ **Report Generation**: Professional DOCX reports with Norstella branding
 ✅ **Web Interface**: Streamlit with file upload, analysis, and report tabs

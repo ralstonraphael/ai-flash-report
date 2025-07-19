@@ -184,6 +184,6 @@ This project is licensed under the MIT License.
 ## 🙏 Acknowledgments
 
 - Built with [LangChain](https://github.com/hwchase17/langchain)
-- Vector storage by [ChromaDB](https://github.com/chroma-core/chroma)
+- Vector storage by [Pinecone](https://www.pinecone.io/)
 - Document processing with [Docling](https://github.com/docling/docling)
 - UI powered by [Streamlit](https://streamlit.io/)

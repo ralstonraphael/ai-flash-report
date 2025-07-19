@@ -13,8 +13,8 @@ pandas==2.3.0
 docling==2.36.1
 docling-core==2.37.0
 
-# Vector Storage - ChromaDB Cloud ONLY
-chromadb==0.4.22
+# Vector Storage - Pinecone
+pinecone-client==3.0.0
 tiktoken==0.9.0
 
 # Web UI
