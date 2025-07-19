@@ -601,8 +601,7 @@ def report_section():
                 status.write("Creating cover page...")
                 generator.add_cover_page(
                     title=report_title,
-                    subtitle=f"Generated on {report_date}",
-                    logo_path="templates/Images/Norstella_color_positive_RGB_(2).png"
+                    subtitle=f"Generated on {report_date}"
                 )
                 
                 # Generate each section
