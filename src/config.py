@@ -44,6 +44,7 @@ CHUNK_OVERLAP = 200
 OPENAI_API_KEY = get_config_value("OPENAI_API_KEY")
 OPENAI_MODEL = get_config_value("OPENAI_MODEL", "gpt-4")  # or gpt-3.5-turbo for faster, cheaper processing
 OPENAI_EMBEDDING_MODEL = get_config_value("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+OPENAI_EMBEDDING_DIMENSIONS = 512  # Match Pinecone index dimensions
 
 # Pinecone settings
 PINECONE_API_KEY = get_config_value("PINECONE_API_KEY")
@@ -86,6 +87,7 @@ __all__ = [
     "OPENAI_API_KEY",
     "OPENAI_MODEL",
     "OPENAI_EMBEDDING_MODEL",
+    "OPENAI_EMBEDDING_DIMENSIONS",
     "PINECONE_API_KEY",
     "PINECONE_ENVIRONMENT",
     "PINECONE_INDEX",

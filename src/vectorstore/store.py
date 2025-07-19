@@ -56,7 +56,10 @@ class VectorStore:
                 "Run: pip install pinecone-client==3.0.0"
             )
             
-        self.embedding_function = embedding_function or OpenAIEmbeddings()
+        self.embedding_function = embedding_function or OpenAIEmbeddings(
+            model="text-embedding-3-small",
+            dimensions=512  # Match Pinecone index dimensions
+        )
         self.current_namespace = None
         
         # Initialize Pinecone
