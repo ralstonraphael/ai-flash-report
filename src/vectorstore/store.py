@@ -19,8 +19,24 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 from langchain.schema import Document as LangChainDocument
 from langchain_openai import OpenAIEmbeddings
 from langchain.vectorstores import Pinecone as PineconeVectorStore
-import pinecone
-from pinecone import Pinecone, ServerlessSpec
+
+# Try to import pinecone with fallback
+try:
+    import pinecone
+    from pinecone import Pinecone, ServerlessSpec
+    PINECONE_AVAILABLE = True
+    logger.info("✅ Pinecone module imported successfully")
+except ImportError as e:
+    logger.error(f"❌ Pinecone module not available: {e}")
+    logger.error("💡 Please install pinecone-client: pip install pinecone-client==3.0.0")
+    PINECONE_AVAILABLE = False
+    # Create dummy classes for type hints
+    class Pinecone:
+        def __init__(self, api_key):
+            raise ImportError("Pinecone not available")
+        def Index(self, name):
+            raise ImportError("Pinecone not available")
+    ServerlessSpec = type('ServerlessSpec', (), {})
 
 from src.config import PINECONE_API_KEY, PINECONE_ENVIRONMENT, PINECONE_INDEX
 
@@ -34,6 +50,12 @@ class VectorStore:
         Args:
             embedding_function: OpenAI embeddings instance (will create if None)
         """
+        if not PINECONE_AVAILABLE:
+            raise ImportError(
+                "Pinecone is not available. Please install pinecone-client==3.0.0. "
+                "Run: pip install pinecone-client==3.0.0"
+            )
+            
         self.embedding_function = embedding_function or OpenAIEmbeddings()
         self.current_namespace = None
         
