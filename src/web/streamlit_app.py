@@ -13,6 +13,15 @@ logger = logging.getLogger(__name__)
 # Add the project root to the Python path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
+# CRITICAL: Import torch fix FIRST before any other imports
+try:
+    import fix_torch_watcher
+    logger.info("✅ Torch watcher fix applied successfully")
+except ImportError as e:
+    logger.warning(f"⚠️ Could not import torch fix: {e}")
+except Exception as e:
+    logger.warning(f"⚠️ Torch fix failed: {e}")
+
 import streamlit as st
 import tempfile
 import warnings
