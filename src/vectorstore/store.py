@@ -202,24 +202,34 @@ class VectorStore:
             
             logger.info(f"📊 Total vectors processed: {total_added}")
             
-            # Verify upload with retry (Pinecone async writes may take a moment)
+            # Verify upload with retry (Serverless Pinecone needs longer propagation time)
             import time
-            time.sleep(2)  # Wait for async writes to complete
+            logger.info("⏳ Waiting for serverless propagation (5-10 seconds)...")
+            time.sleep(5)  # Serverless needs longer initial wait
+            
             stats = self.index.describe_index_stats()
             namespace_count = stats.namespaces.get(namespace, {}).get('vector_count', 0)
-            logger.info(f"✅ Successfully created namespace '{namespace}' with {namespace_count} vectors")
+            logger.info(f"📊 After 5s: Found {namespace_count} vectors in namespace '{namespace}'")
             
-            # Additional verification if count seems low
+            # Additional verification with longer waits for serverless
             if namespace_count < total_added:
-                logger.warning(f"⚠️ Expected {total_added} vectors, found {namespace_count}. Waiting for async writes...")
-                time.sleep(3)  # Additional wait
+                logger.info(f"⏳ Expected {total_added}, found {namespace_count}. Waiting additional 5 seconds for serverless propagation...")
+                time.sleep(5)  # Longer wait for serverless
+                
                 stats = self.index.describe_index_stats()
                 final_count = stats.namespaces.get(namespace, {}).get('vector_count', 0)
-                logger.info(f"📊 Final count after retry: {final_count} vectors")
+                logger.info(f"📊 After 10s total: Found {final_count} vectors")
                 
-                if final_count == 0:
-                    logger.error(f"❌ No vectors were stored! Check Pinecone permissions and index configuration")
-                    raise RuntimeError(f"Failed to store vectors in namespace '{namespace}'")
+                if final_count < total_added:
+                    logger.warning(f"⚠️ Serverless propagation incomplete: Expected {total_added}, found {final_count}")
+                    logger.info("💡 Vectors may still be propagating. This is normal for serverless indices.")
+                    
+                    # Don't fail - vectors are likely there, just not reflected in stats yet
+                    if final_count == 0:
+                        logger.error(f"❌ No vectors found after 10 seconds - possible configuration issue")
+                        raise RuntimeError(f"Failed to store any vectors in namespace '{namespace}'")
+                else:
+                    logger.info(f"✅ All {final_count} vectors confirmed after extended wait")
             
             return namespace_vectorstore
             
