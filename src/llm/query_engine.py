@@ -58,6 +58,14 @@ class QueryEngine:
         self.output_parser = StrOutputParser()
         self.timeout = timeout
         
+        # Company-specific context for Norstella
+        self.company_context = """
+        Norstella is a global healthcare technology company formed through the combination of multiple industry-leading companies. 
+        Norstella provides technology-enabled solutions, analytics, and insights to help pharmaceutical, biotechnology, and medical device companies 
+        accelerate the development and commercialization of their products. The company serves as a strategic partner throughout the product lifecycle, 
+        from early-stage research and development through commercialization and market access.
+        """
+        
         # Initialize prompt templates
         self._init_prompts()
 
@@ -405,8 +413,8 @@ class QueryEngine:
             else:
                 prompt = self.qa_prompt  # Default to QA prompt
             
-            # Join context chunks with separators
-            formatted_context = "\n\n---\n\n".join(context)
+            # Join context chunks with separators and add company context
+            formatted_context = self.company_context + "\n\n---\n\n" + "\n\n---\n\n".join(context)
             
             # Generate response
             if progress_callback:

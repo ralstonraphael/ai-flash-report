@@ -69,7 +69,7 @@ if sys.platform == "darwin":
 
 from src.ingestion.document_loader import DocumentLoader
 from src.vectorstore.store import VectorStore
-from src.llm.query_engine import QueryEngine, QueryIntent
+from src.llm.query_engine import QueryEngine, QueryIntent, QueryTimeoutError
 from src.report.docx_generator import ReportGenerator
 from src.config import VECTORSTORE_PATH
 
@@ -129,7 +129,7 @@ def upload_section():
         if st.button("🔄 Reset Upload", help="Click if files aren't uploading properly"):
             # Clear all upload-related session state
             for key in list(st.session_state.keys()):
-                if 'uploader' in key or 'upload' in key:
+                if 'uploader' in str(key) or 'upload' in str(key):
                     del st.session_state[key]
             st.rerun()
     
@@ -694,6 +694,11 @@ def report_section():
 
 def main():
     """Main application function."""
+    # Health check endpoint - stops execution for monitoring
+    if st.secrets.get("HEALTHCHECK_PING", False):
+        st.write("✅ App is up and healthy!")
+        st.stop()
+    
     init_session_state()
     setup_page()
     

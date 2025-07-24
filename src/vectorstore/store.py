@@ -60,6 +60,14 @@ class VectorStore:
             model="text-embedding-3-small",
             dimensions=512  # Match Pinecone index dimensions
         )
+        
+        # Sanity check: Verify embedding dimensions
+        try:
+            test_embedding = self.embedding_function.embed_query("test")
+            logger.info(f"✅ Embedding dimensions confirmed: {len(test_embedding)}")
+        except Exception as e:
+            logger.warning(f"⚠️ Could not verify embedding dimensions: {e}")
+        
         self.current_namespace = None
         
         # Initialize Pinecone
@@ -144,10 +152,20 @@ class VectorStore:
             self.current_namespace = namespace
             self.vectorstore = namespace_vectorstore
             
-            # Verify upload
+            # Verify upload with retry (Pinecone async writes may take a moment)
+            import time
+            time.sleep(2)  # Wait for async writes to complete
             stats = self.index.describe_index_stats()
             namespace_count = stats.namespaces.get(namespace, {}).get('vector_count', 0)
             logger.info(f"✅ Successfully created namespace '{namespace}' with {namespace_count} vectors")
+            
+            # Additional verification if count seems low
+            if namespace_count < len(documents):
+                logger.warning(f"⚠️ Expected {len(documents)} vectors, found {namespace_count}. Waiting for async writes...")
+                time.sleep(3)  # Additional wait
+                stats = self.index.describe_index_stats()
+                final_count = stats.namespaces.get(namespace, {}).get('vector_count', 0)
+                logger.info(f"📊 Final count after retry: {final_count} vectors")
             
             return namespace_vectorstore
             

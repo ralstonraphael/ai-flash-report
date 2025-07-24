@@ -5,8 +5,8 @@ maxUploadSize = 200
 # Increase message size for large uploads
 maxMessageSize = 200
 
-# Enable file watching for development
-fileWatcherType = "auto"
+# Disable deep module watching to prevent torch.classes errors
+fileWatcherType = "none"
 
 # Set port
 port = 8501
