@@ -137,20 +137,56 @@ class VectorStore:
             texts = [doc.page_content for doc in documents]
             metadatas = [doc.metadata for doc in documents]
             
-            # Add documents in batches (Pinecone recommends batch sizes of 100)
+            # Debug: Check if texts are empty
+            non_empty_texts = [text for text in texts if text and text.strip()]
+            if len(non_empty_texts) != len(texts):
+                logger.warning(f"⚠️ Found {len(texts) - len(non_empty_texts)} empty texts out of {len(texts)}")
+            
+            # Add documents using direct Pinecone client (more reliable than LangChain wrapper)
             batch_size = 100
+            total_added = 0
+            
             for i in range(0, len(texts), batch_size):
                 batch_texts = texts[i:i + batch_size]
                 batch_metadatas = metadatas[i:i + batch_size]
                 
-                namespace_vectorstore.add_texts(
-                    texts=batch_texts,
-                    metadatas=batch_metadatas
-                )
-                logger.info(f"✅ Added batch {i//batch_size + 1}/{(len(texts)-1)//batch_size + 1}")
+                # Create vectors for this batch
+                vectors = []
+                for j, (text, metadata) in enumerate(zip(batch_texts, batch_metadatas)):
+                    if not text or not text.strip():
+                        logger.warning(f"⚠️ Skipping empty text at position {i + j}")
+                        continue
+                        
+                    # Generate embedding
+                    embedding = self.embedding_function.embed_query(text)
+                    
+                    # Create vector with unique ID
+                    vector_id = f"{namespace}-{i + j}-{uuid.uuid4().hex[:8]}"
+                    vectors.append({
+                        "id": vector_id,
+                        "values": embedding,
+                        "metadata": {
+                            **metadata,
+                            "text": text,  # Store original text in metadata
+                            "namespace": namespace
+                        }
+                    })
+                
+                if vectors:
+                    # Upsert vectors directly to Pinecone
+                    upsert_response = self.index.upsert(
+                        vectors=vectors,
+                        namespace=namespace
+                    )
+                    total_added += len(vectors)
+                    logger.info(f"✅ Added batch {i//batch_size + 1}/{(len(texts)-1)//batch_size + 1}: {len(vectors)} vectors")
+                else:
+                    logger.warning(f"⚠️ Skipping empty batch {i//batch_size + 1}")
             
             self.current_namespace = namespace
             self.vectorstore = namespace_vectorstore
+            
+            logger.info(f"📊 Total vectors processed: {total_added}")
             
             # Verify upload with retry (Pinecone async writes may take a moment)
             import time
@@ -160,12 +196,16 @@ class VectorStore:
             logger.info(f"✅ Successfully created namespace '{namespace}' with {namespace_count} vectors")
             
             # Additional verification if count seems low
-            if namespace_count < len(documents):
-                logger.warning(f"⚠️ Expected {len(documents)} vectors, found {namespace_count}. Waiting for async writes...")
+            if namespace_count < total_added:
+                logger.warning(f"⚠️ Expected {total_added} vectors, found {namespace_count}. Waiting for async writes...")
                 time.sleep(3)  # Additional wait
                 stats = self.index.describe_index_stats()
                 final_count = stats.namespaces.get(namespace, {}).get('vector_count', 0)
                 logger.info(f"📊 Final count after retry: {final_count} vectors")
+                
+                if final_count == 0:
+                    logger.error(f"❌ No vectors were stored! Check Pinecone permissions and index configuration")
+                    raise RuntimeError(f"Failed to store vectors in namespace '{namespace}'")
             
             return namespace_vectorstore
             
@@ -226,11 +266,16 @@ class VectorStore:
         logger.info(f"🔍 Querying namespace '{self.current_namespace}' with: {query}")
         
         try:
-            # Perform similarity search
+            # Use LangChain wrapper for compatibility
             results = self.vectorstore.similarity_search(query, k=k)
             
             # Extract text content from results
-            documents = [doc.page_content for doc in results]
+            documents = []
+            for doc in results:
+                if hasattr(doc, 'page_content') and doc.page_content:
+                    documents.append(doc.page_content)
+                elif hasattr(doc, 'metadata') and doc.metadata.get('text'):
+                    documents.append(doc.metadata['text'])
             
             logger.info(f"✅ Found {len(documents)} relevant documents")
             return documents
