@@ -67,6 +67,24 @@ if sys.platform == "darwin":
     except Exception as e:
         logger.warning(f"Could not set event loop policy: {e}")
 
+# Additional fix for torch.classes watcher issue
+try:
+    import torch
+    # Monkey patch the problematic torch._classes.__path__ attribute
+    if hasattr(torch, '_classes') and hasattr(torch._classes, '__path__'):  # type: ignore
+        # Replace with a simple object that won't cause watcher issues
+        class MockPath:
+            def __iter__(self):
+                return iter([])
+            @property 
+            def _path(self):
+                return []
+        torch._classes.__path__ = MockPath()  # type: ignore
+except ImportError:
+    pass  # torch not available
+except Exception as e:
+    logger.debug(f"Could not patch torch._classes: {e}")
+
 from src.ingestion.document_loader import DocumentLoader
 from src.vectorstore.store import VectorStore
 from src.llm.query_engine import QueryEngine, QueryIntent, QueryTimeoutError

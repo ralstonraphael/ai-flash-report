@@ -173,13 +173,27 @@ class VectorStore:
                     })
                 
                 if vectors:
-                    # Upsert vectors directly to Pinecone
-                    upsert_response = self.index.upsert(
-                        vectors=vectors,
-                        namespace=namespace
-                    )
-                    total_added += len(vectors)
-                    logger.info(f"✅ Added batch {i//batch_size + 1}/{(len(texts)-1)//batch_size + 1}: {len(vectors)} vectors")
+                    try:
+                        # Upsert vectors directly to Pinecone
+                        logger.info(f"🔄 Attempting to upsert {len(vectors)} vectors to namespace '{namespace}'...")
+                        upsert_response = self.index.upsert(
+                            vectors=vectors,
+                            namespace=namespace
+                        )
+                        
+                        # Log upsert response details
+                        if hasattr(upsert_response, 'upserted_count'):
+                            logger.info(f"📤 Pinecone reported {upsert_response.upserted_count} vectors upserted")
+                        else:
+                            logger.info(f"📤 Upsert response: {upsert_response}")
+                        
+                        total_added += len(vectors)
+                        logger.info(f"✅ Added batch {i//batch_size + 1}/{(len(texts)-1)//batch_size + 1}: {len(vectors)} vectors")
+                        
+                    except Exception as upsert_error:
+                        logger.error(f"❌ Failed to upsert batch {i//batch_size + 1}: {str(upsert_error)}")
+                        logger.error(f"❌ Vector sample: {vectors[0] if vectors else 'No vectors'}")
+                        raise RuntimeError(f"Pinecone upsert failed: {str(upsert_error)}")
                 else:
                     logger.warning(f"⚠️ Skipping empty batch {i//batch_size + 1}")
             

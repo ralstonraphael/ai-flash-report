@@ -5,14 +5,18 @@ maxUploadSize = 200
 # Increase message size for large uploads
 maxMessageSize = 200
 
-# Disable deep module watching to prevent torch.classes errors
+# Completely disable file watching to prevent torch.classes errors
 fileWatcherType = "none"
+runOnSave = false
 
 # Set port
 port = 8501
 
 # Disable XSRF protection to allow CORS (fixes the warning)
 enableXsrfProtection = false
+
+# Additional settings to prevent module introspection
+enableCORS = false
 
 [browser]
 # Don't gather usage stats
