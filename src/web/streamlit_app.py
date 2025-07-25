@@ -594,11 +594,6 @@ def report_section():
 
 def main():
     """Main application function."""
-    # Health check endpoint - stops execution for monitoring
-    if st.secrets.get("HEALTHCHECK_PING", False):
-        st.write("✅ App is up and healthy!")
-        st.stop()
-    
     init_session_state()
     setup_page()
     
