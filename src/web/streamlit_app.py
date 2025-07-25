@@ -96,9 +96,10 @@ except Exception as e:
 
 from src.ingestion.document_loader import DocumentLoader
 from src.vectorstore.store import VectorStore
-from src.llm.query_engine import QueryEngine, QueryIntent, QueryTimeoutError
+from src.llm.query_engine import QueryEngine
 from src.report.docx_generator import ReportGenerator
 from src.config import VECTORSTORE_PATH
+from src.web.enhanced_analysis import enhanced_analysis_section
 
 def init_session_state():
     """Initialize session state variables."""
@@ -120,7 +121,7 @@ def init_session_state():
 def setup_page():
     """Set up the main page layout and title."""
     st.title("📊 AI Flash Report Generator")
-    st.markdown("Transform your documents into comprehensive insights and professional reports")
+    st.markdown("Transform your documents into comprehensive insights through conversational AI analysis and professional reports")
 
 def check_api_key():
     """Check if OpenAI API key is configured."""
@@ -357,7 +358,7 @@ def upload_section():
                             """)
                             
                             # Guide to next step
-                            st.info("👉 Go to the Analysis tab to start exploring your documents")
+                            st.info("👉 Go to the AI Chat Analysis tab to start conversing with your documents")
                             
                         except Exception as e:
                             st.error(f"❌ Error processing documents: {str(e)}")
@@ -394,12 +395,19 @@ def upload_section():
         # Simple help text
         st.info("📁 Select PDF, DOCX, or CSV files to get started")
         
-        # Show supported formats in sidebar instead
+        # Show supported formats and new features in sidebar
         st.sidebar.markdown("""
         ### 📋 Supported Formats
         - **PDF** (.pdf) - Up to 200MB
         - **Word** (.docx) - Up to 200MB  
         - **CSV** (.csv) - Up to 200MB
+        
+        ### 💬 New! AI Chat Analysis
+        After uploading, chat with your documents using:
+        - **Natural conversation** - Ask questions like you would to a colleague
+        - **Multiple tones** - Professional, Friendly, Analytical, Creative, Executive
+        - **Smart follow-ups** - AI suggests relevant next questions
+        - **Conversation memory** - Builds on previous exchanges
         """)
         
         # Enhanced troubleshooting tips
@@ -433,139 +441,9 @@ def upload_section():
 
 
 def analysis_section():
-    """Handle document analysis and querying."""
-    if not st.session_state.documents_loaded:
-        st.info("⚠️ Please upload and process documents first")
-        return
-    
-    st.subheader("🔍 Document Analysis")
-    
-    # Recommended prompts based on content
-    with st.expander("💡 Recommended Prompts", expanded=True):
-        st.markdown("""
-        Based on your uploaded documents, here are some recommended prompts:
-        
-        **Quick Analysis:**
-        - "Generate an executive summary of the key points"
-        - "What are the most significant changes or updates?"
-        - "What are the key strategic implications?"
-        
-        **Detailed Analysis:**
-        - "Analyze the company's market position and competitive landscape"
-        - "Extract key financial metrics and trends"
-        - "What are the main product/service updates?"
-        
-        **Strategic Insights:**
-        - "What are the key strategic recommendations?"
-        - "Generate a SWOT analysis"
-        - "What are the main opportunities and risks?"
-        
-        Click any prompt to use it.
-        """)
-        
-        # Quick prompt buttons
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("📊 Extract Key Metrics"):
-                st.session_state.query = "Extract and analyze key financial and operational metrics"
-            if st.button("🎯 Strategic Analysis"):
-                st.session_state.query = "Provide a detailed strategic analysis and recommendations"
-        with col2:
-            if st.button("📈 Market Position"):
-                st.session_state.query = "Analyze market position and competitive landscape"
-            if st.button("📋 Executive Summary"):
-                st.session_state.query = "Generate a comprehensive executive summary"
-    
-    # Query interface
-    col1, col2 = st.columns([3, 1])
-    
-    with col1:
-        query = st.text_area(
-            "What would you like to know?",
-            value=st.session_state.get('query', ''),
-            help="Enter your question about the documents",
-            height=100
-        )
-    
-    with col2:
-        query_type = st.selectbox(
-            "Analysis Type",
-            ["Summary", "Specific Question", "Data Extraction"],
-            help="""
-            - Summary: Get a high-level overview
-            - Specific Question: Get precise answers
-            - Data Extraction: Pull out specific data points
-            """
-        )
-        
-        analyze_button = st.button("Analyze", type="primary")
-    
-    if query and analyze_button:
-        try:
-            progress_placeholder = st.empty()
-            
-            def update_progress(message: str):
-                progress_placeholder.info(message)
-            
-            # Map query type to intent
-            intent_map = {
-                "Summary": QueryIntent.SUMMARY,
-                "Specific Question": QueryIntent.SPECIFIC_QUESTION,
-                "Data Extraction": QueryIntent.DATA_EXTRACTION
-            }
-            
-            # Get context
-            update_progress("Finding relevant information...")
-            vs = st.session_state.vectorstore
-            context = vs.query_collection(query)
-            
-            # Generate response with progress tracking
-            engine = QueryEngine(timeout=45)  # Increased timeout for complex queries
-            try:
-                response = engine.generate_response(
-                    query=query,
-                    context=context,
-                    intent=intent_map[query_type],
-                    progress_callback=update_progress
-                )
-                
-                # Store the response
-                st.session_state.analysis_result = response
-                
-                # Clear progress message
-                progress_placeholder.empty()
-                
-                # Show results
-                st.markdown("### Analysis Results")
-                st.write(response)
-                
-                # Show metrics with progress tracking
-                st.markdown("### Response Quality Assessment")
-                metrics = engine.evaluate_response(
-                    query,
-                    response,
-                    context,
-                    progress_callback=update_progress
-                )
-                
-                # Display metrics in an organized way
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.metric("Relevance", f"{metrics['relevance']['score']:.2f}")
-                    st.metric("Accuracy", f"{metrics['accuracy']['score']:.2f}")
-                    st.metric("Completeness", f"{metrics['completeness']['score']:.2f}")
-                
-                with col2:
-                    st.metric("Coherence", f"{metrics['coherence']['score']:.2f}")
-                    st.metric("Conciseness", f"{metrics['conciseness']['score']:.2f}")
-                
-            except QueryTimeoutError:
-                st.error("Analysis took too long to complete. Please try a more specific query or break it into smaller parts.")
-                
-        except Exception as e:
-            logger.error(f"Error: {str(e)}")
-            st.error("Error analyzing documents. Please try again with a different query.")
+    """Handle document analysis using enhanced conversational interface."""
+    # Use the enhanced conversational analysis instead of basic query interface
+    enhanced_analysis_section()
 
 
 def report_section():
@@ -732,8 +610,8 @@ def main():
     if not check_api_key():
         return
     
-    # Navigation - removed Visualization tab
-    tab1, tab2, tab3 = st.tabs(["Upload", "Analysis", "Report"])
+    # Navigation with enhanced conversational analysis
+    tab1, tab2, tab3 = st.tabs(["📁 Upload", "💬 AI Chat Analysis", "📊 Report"])
     
     with tab1:
         upload_section()
