@@ -254,6 +254,37 @@ class ReportGenerator:
     def save(self, filename: str):
         """Save the document to a file."""
         self.doc.save(filename)
+    
+    def get_docx_bytes(self) -> bytes:
+        """
+        Get the document as bytes for Streamlit download_button.
+        This is the recommended approach for Streamlit Cloud compatibility.
+        
+        Returns:
+            bytes: The complete docx document as bytes
+        """
+        try:
+            bio = io.BytesIO()
+            self.doc.save(bio)
+            bio.seek(0)
+            document_bytes = bio.getvalue()
+            
+            # Validate that we have actual content
+            if len(document_bytes) < 1000:  # A valid docx should be at least 1KB
+                logger.warning("Generated docx appears to be too small, may be corrupted")
+            
+            logger.info(f"Generated docx document: {len(document_bytes)} bytes")
+            return document_bytes
+            
+        except Exception as e:
+            logger.error(f"Error generating docx bytes: {str(e)}")
+            # Create a minimal fallback document
+            fallback_doc = Document()
+            fallback_doc.add_paragraph("Error generating report. Please try again.")
+            fallback_bio = io.BytesIO()
+            fallback_doc.save(fallback_bio)
+            fallback_bio.seek(0)
+            return fallback_bio.getvalue()
 
     def add_formatted_text(self, text: str, style: str = 'NorstBody'):
         """Add formatted text to the document."""

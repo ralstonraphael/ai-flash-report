@@ -573,24 +573,19 @@ def report_section():
                     else:
                         status.write("⚠️ Strategic insights skipped (insufficient content)")
                 
-                # Save report
-                status.write("Saving report...")
+                # Generate report in memory
+                status.write("Finalizing report...")
                 report_filename = f"flash_report_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
-                generator.save(report_filename)
                 
                 status.update(label="✅ Report generated successfully!", state="complete")
             
-            # Provide download link
-            with open(report_filename, "rb") as file:
-                st.download_button(
-                    label="Download Report",
-                    data=file,
-                    file_name=report_filename,
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                )
-            
-            # Cleanup
-            os.remove(report_filename)
+            # Provide download using BytesIO (Streamlit Cloud compatible)
+            st.download_button(
+                label="📄 Download Report",
+                data=generator.get_docx_bytes(),
+                file_name=report_filename,
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
             
         except Exception as e:
             logger.error(f"Error generating report: {str(e)}")
