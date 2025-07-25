@@ -239,137 +239,118 @@ class QueryEngine:
         """
         prompts = {
             "executive_summary": """
-                Generate a comprehensive executive summary with complete, substantive content.
+                Generate a focused executive summary for a strategic flash report.
                 
                 CRITICAL REQUIREMENTS:
-                1. Write 4-5 full paragraphs (minimum 100 words each)
+                1. Write EXACTLY 2 focused paragraphs (80-100 words each)
                 2. Use the actual company name from the context - NEVER use "The company" or generic terms
-                3. Include specific details, numbers, dates, and examples from the context
-                4. Write in complete sentences with proper conclusions
+                3. Focus on the most impactful strategic information for executive decision-making
+                4. Include only the most critical numbers, dates, and strategic developments
                 5. Do NOT use markdown headers or bullet points
-                6. Write as flowing narrative paragraphs
+                6. Write for senior strategy teams who need actionable insights
                 
-                Write a comprehensive executive summary covering:
+                Structure for strategic impact:
                 
-                First paragraph: Current strategic position and recent major developments with specific company names, dates, and financial figures.
+                First paragraph: Most significant recent strategic developments, key financial metrics, and major business changes that impact competitive position. Include specific company names, dates, and the strategic significance of each development.
                 
-                Second paragraph: Key business developments, launches, acquisitions, partnerships, or strategic moves with detailed explanations of their significance.
-                
-                Third paragraph: Market impact and competitive implications of these developments.
-                
-                Fourth paragraph: Future outlook and strategic implications for the company's growth prospects.
+                Second paragraph: Critical strategic implications and most important opportunities or risks that require executive attention. Focus on what strategy teams need to know for decision-making.
                 
                 Context: {context}
                 
-                Remember: Write complete paragraphs without headers. Use specific company names and detailed supporting evidence.
+                Remember: Prioritize strategic impact over comprehensive detail. Focus on what matters most for executive decision-making.
             """,
             
             "company_overview": """
-                Provide a comprehensive company overview with detailed analysis in paragraph form.
+                Provide a strategic company overview for a flash report.
                 
                 CRITICAL REQUIREMENTS:
-                1. Write 4-5 full paragraphs (minimum 100 words each)
+                1. Write EXACTLY 2 focused paragraphs (80-100 words each)
                 2. Use the actual company name from the context - NEVER use "The company" or generic terms
-                3. Include specific details about business model, operations, and strategy
-                4. Write in complete sentences with proper conclusions
+                3. Focus on business model and strategic positioning elements most relevant to strategy teams
+                4. Emphasize competitive advantages and strategic differentiators
                 5. Do NOT use markdown headers or bullet points
-                6. Write as flowing narrative paragraphs
+                6. Write for senior executives who need strategic context
                 
-                Write a comprehensive company overview covering:
+                Structure for strategic value:
                 
-                First paragraph: Business model, core operations, and how the company generates revenue with specific details about business segments.
+                First paragraph: Core business model, primary revenue streams, and key strategic positions in the market. Include specific business segments and how they create competitive advantage.
                 
-                Second paragraph: Historical development, key milestones, and recent strategic developments that have shaped the current position.
-                
-                Third paragraph: Current market position, competitive advantages, and strategic direction with specific examples.
-                
-                Fourth paragraph: Operational structure, key capabilities, and how the company differentiates itself in the market.
+                Second paragraph: Most important recent strategic developments, acquisitions, or changes that have reshaped the company's competitive position and market approach.
                 
                 Context: {context}
                 
-                Remember: Write complete paragraphs without headers. Use specific company names and detailed examples.
+                Remember: Focus on strategic elements that impact competitive positioning and market opportunities.
             """,
             
             "core_offerings": """
-                Provide a detailed analysis of the company's products and services in paragraph form.
+                Provide a strategic analysis of key products and services for a flash report.
                 
                 CRITICAL REQUIREMENTS:
-                1. Write 4-5 full paragraphs (minimum 100 words each)
+                1. Write EXACTLY 2 focused paragraphs (80-100 words each)
                 2. Use the actual company name from the context - NEVER use "The company" or generic terms
-                3. Include specific details about products, features, and market reception
-                4. Write in complete sentences with proper conclusions
+                3. Focus on products/services that provide strategic advantage or drive growth
+                4. Emphasize competitive differentiation and market impact
                 5. Do NOT use markdown headers or bullet points
-                6. Write as flowing narrative paragraphs
+                6. Write for strategy teams evaluating competitive threats and opportunities
                 
-                Write a detailed analysis covering:
+                Structure for strategic relevance:
                 
-                First paragraph: Primary products and services portfolio with specific product names, features, and how they serve different customer segments.
+                First paragraph: Most strategically important products or services, their competitive advantages, and how they drive market position. Include specific product names and their strategic significance.
                 
-                Second paragraph: Recent product launches, updates, innovations, or service enhancements with detailed explanations of new features and capabilities.
-                
-                Third paragraph: Market reception, customer feedback, and adoption rates for key products and services.
-                
-                Fourth paragraph: Competitive advantages these offerings provide and how they position the company in the market.
+                Second paragraph: Recent product developments, launches, or innovations that create new competitive advantages or market opportunities, and their potential strategic impact.
                 
                 Context: {context}
                 
-                Remember: Write complete paragraphs without headers. Use specific product names and detailed market analysis.
+                Remember: Focus on offerings that matter most for competitive strategy and market positioning.
             """,
             
             "market_position": """
-                Deliver a thorough analysis of the company's market position and competitive landscape in paragraph form.
+                Deliver a strategic market position analysis for a flash report.
                 
                 CRITICAL REQUIREMENTS:
-                1. Write 4-5 full paragraphs (minimum 100 words each)
+                1. Write EXACTLY 2 focused paragraphs (80-100 words each)
                 2. Use the actual company name from the context - NEVER use "The company" or generic terms
-                3. Include specific details about market share, competitors, and positioning
-                4. Write in complete sentences with proper conclusions
+                3. Focus on competitive positioning and strategic market advantages
+                4. Emphasize market share dynamics and competitive threats/opportunities
                 5. Do NOT use markdown headers or bullet points
-                6. Write as flowing narrative paragraphs
+                6. Write for executives making competitive strategy decisions
                 
-                Write a thorough market analysis covering:
+                Structure for strategic insight:
                 
-                First paragraph: Market share, competitive standing, and how the company compares to key competitors with specific market data and competitor names.
+                First paragraph: Current competitive position, market share dynamics, and key competitive advantages or vulnerabilities. Include specific competitor names and market positioning.
                 
-                Second paragraph: Key differentiators, unique value propositions, and sustainable competitive advantages that set the company apart.
-                
-                Third paragraph: Current market trends, industry dynamics, and how these affect the competitive landscape.
-                
-                Fourth paragraph: The company's positioning strategy and how it's adapting to capitalize on market opportunities or respond to challenges.
+                Second paragraph: Most significant market trends and competitive threats or opportunities that could impact strategic positioning and require strategic response.
                 
                 Context: {context}
                 
-                Remember: Write complete paragraphs without headers. Support analysis with specific data and competitor examples.
+                Remember: Focus on competitive dynamics that impact strategic decision-making and market opportunities.
             """,
             
             "strategic_insights": """
-                Provide comprehensive strategic insights and recommendations in paragraph form.
+                Provide focused strategic insights and recommendations for a flash report.
                 
                 CRITICAL REQUIREMENTS:
-                1. Write 4-5 full paragraphs (minimum 100 words each)
+                1. Write EXACTLY 2 focused paragraphs (80-100 words each)
                 2. Use the actual company name from the context - NEVER use "The company" or generic terms
-                3. Include specific, actionable recommendations with supporting rationale
-                4. Write in complete sentences with proper conclusions
+                3. Focus on the most critical strategic opportunities and risks
+                4. Provide specific, actionable strategic recommendations
                 5. Do NOT use markdown headers or bullet points
-                6. Write as flowing narrative paragraphs
+                6. Write for senior executives making strategic decisions
                 
-                Write comprehensive strategic insights covering:
+                Structure for strategic action:
                 
-                First paragraph: Key strategic strengths and market opportunities with specific examples and explanations of how these can be leveraged for growth.
+                First paragraph: Most significant strategic opportunities and strengths that should be prioritized, with specific recommendations for how to capitalize on them for competitive advantage.
                 
-                Second paragraph: Primary challenges, competitive threats, and risk factors that could impact performance or strategic objectives.
-                
-                Third paragraph: Strategic recommendations for capitalizing on opportunities, including specific actions and their expected benefits.
-                
-                Fourth paragraph: Risk mitigation strategies and recommendations for addressing identified challenges and threats.
+                Second paragraph: Most critical strategic risks or challenges that require immediate attention, with specific recommendations for mitigation or strategic response.
                 
                 Context: {context}
                 
-                Remember: Write complete paragraphs without headers. Include detailed, actionable recommendations with supporting analysis.
+                Remember: Focus on actionable strategic insights that drive executive decision-making and competitive advantage.
             """
         }
         
-        prompt = ChatPromptTemplate.from_template(prompts.get(section_type, self.summary_prompt))
+        prompt_text = prompts.get(section_type, prompts["executive_summary"])
+        prompt = ChatPromptTemplate.from_template(prompt_text)
         chain = prompt | self.llm | self.output_parser
         
         return chain.invoke({
