@@ -133,11 +133,11 @@ def process_user_message(user_input: str) -> Dict[str, Any]:
             
             status.write("🧠 Generating response...")
             
-            # Generate response using conversational engine
+            # Generate response using conversational engine with advanced RAG
             engine = st.session_state.conv_engine
             response, intent = engine.generate_response(
                 query=user_input,
-                context=context,
+                vectorstore=vs,
                 progress_callback=lambda msg: status.write(msg)
             )
             
