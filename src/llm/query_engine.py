@@ -1,18 +1,16 @@
 """
-Query engine module for handling LLM interactions and response generation.
+Query engine for generating structured responses from document context.
 """
-from typing import List, Dict, Any, Optional
-from enum import Enum
-import logging
+from typing import List, Optional, Dict, Any, Tuple, Union, Callable
 import asyncio
-from concurrent.futures import TimeoutError
+import logging
 import time
+from enum import Enum
 
-from langchain_openai import ChatOpenAI
+from langchain.schema import Document as LangChainDocument
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain.evaluation import load_evaluator, EvaluatorType
-from langchain.schema import Document as LangChainDocument
+from langchain_openai import ChatOpenAI
 
 from src.config import OPENAI_MODEL
 
@@ -22,8 +20,6 @@ logger = logging.getLogger(__name__)
 
 # Constants
 DEFAULT_TIMEOUT = 30  # seconds
-MAX_RETRIES = 2
-RETRY_DELAY = 1  # seconds
 
 class QueryIntent(Enum):
     """Supported query intent types."""
@@ -33,40 +29,29 @@ class QueryIntent(Enum):
     NEWS_CHECK = "news_check"
 
 class QueryTimeoutError(Exception):
-    """Raised when a query takes too long to complete."""
+    """Raised when a query operation times out."""
     pass
 
 class QueryEngine:
-    """Handles LLM interactions and response generation."""
+    """Handles different types of queries with structured response generation."""
     
-    def __init__(self, model_name: str = OPENAI_MODEL, temperature: float = 0,
+    def __init__(self, model_name: str = OPENAI_MODEL or "gpt-4", temperature: float = 0,
                  timeout: int = DEFAULT_TIMEOUT):
-        """
-        Initialize query engine with LLM model.
-        
-        Args:
-            model_name: Name of OpenAI model to use
-            temperature: Sampling temperature (0 to 1)
-            timeout: Timeout in seconds for API calls
-        """
-        self.llm = ChatOpenAI(
-            model=model_name,
-            temperature=temperature,
-            request_timeout=timeout,
-            max_retries=MAX_RETRIES
-        )
-        self.output_parser = StrOutputParser()
+        """Initialize query engine with model and timeout settings."""
+        self.model_name = model_name
+        self.temperature = temperature
         self.timeout = timeout
         
-        # Company-specific context for Norstella
-        self.company_context = """
-        Norstella is a global healthcare technology company formed through the combination of multiple industry-leading companies. 
-        Norstella provides technology-enabled solutions, analytics, and insights to help pharmaceutical, biotechnology, and medical device companies 
-        accelerate the development and commercialization of their products. The company serves as a strategic partner throughout the product lifecycle, 
-        from early-stage research and development through commercialization and market access.
-        """
+        # Initialize LLM
+        self.llm = ChatOpenAI(
+            model=self.model_name,
+            temperature=self.temperature
+        )
         
-        # Initialize prompt templates
+        # Initialize output parser
+        self.output_parser = StrOutputParser()
+        
+        # Initialize prompts
         self._init_prompts()
 
     def _init_prompts(self):
@@ -87,100 +72,99 @@ class QueryEngine:
         """)
 
         self.summary_prompt = ChatPromptTemplate.from_template("""
-            Create a comprehensive and detailed summary of the provided context.
+            Create a focused business summary using the provided context.
             
             CRITICAL REQUIREMENTS:
-            1. Write 4-6 full paragraphs with complete sentences - NO abbreviations or trailing dots
-            2. Use the actual company name from the context - NEVER use "The company" or generic terms
-            3. Include specific details, numbers, dates, and examples from the context
-            4. Write in full, complete sentences with proper conclusions
-            5. Provide thorough analysis and insights
-            6. Each paragraph should be 4-6 sentences long
+            1. Use actual company names from context - NEVER "The company" or generic terms
+            2. Write 2-5 complete sentences per section - NO MORE
+            3. Include specific numbers, dates, and strategic facts only
+            4. Write in direct, factual language - avoid flowery descriptions
+            5. Each section should stand alone with clear information
             
             Structure your response as follows:
             
             **Executive Overview**
-            Write 2-3 detailed paragraphs covering the main developments and their significance. Include specific company names, dates, financial figures, and strategic implications.
+            Write 2-4 sentences covering the most significant recent development and why it matters strategically. Include specific company names and financial figures.
             
             **Key Changes and Updates**
-            Write 1-2 paragraphs detailing specific changes, launches, acquisitions, or strategic moves. Be specific about what changed, when, and why it matters.
+            Write 2-3 sentences detailing the most important change, launch, or strategic move. State what changed, when, and the business impact.
             
             **Strategic Implications**
-            Write 1-2 paragraphs analyzing what these developments mean for the company's future, competitive position, and market opportunities.
+            Write 2-4 sentences analyzing what this means for competitive position and market opportunities. Focus on actionable insights.
             
             **Future Outlook**
-            Write 1 paragraph providing insights and predictions based on the information provided.
+            Write 2-3 sentences providing specific predictions or expected outcomes based on the evidence provided.
 
             Context:
             {context}
 
             Query: {query}
 
-            Remember: Write complete, full sentences. Use specific company names. Provide detailed analysis with supporting evidence.
+            Remember: Keep each section to 2-5 sentences maximum. Use specific company names and concrete facts.
         """)
 
         self.qa_prompt = ChatPromptTemplate.from_template("""
-            Provide a comprehensive and detailed answer using the provided context.
+            Provide a focused answer using the provided context.
             
             CRITICAL REQUIREMENTS:
-            1. Write 3-5 full paragraphs with complete sentences - NO abbreviations or trailing dots
-            2. Use the actual company name from the context - NEVER use "The company" or generic terms
-            3. Include specific details, numbers, dates, and examples from the context
-            4. Write in full, complete sentences with proper conclusions
-            5. Provide thorough analysis and supporting evidence
+            1. Use actual company names from context - NEVER "The company" or generic terms
+            2. Write 2-5 complete sentences per section - NO MORE
+            3. Include specific numbers, dates, and examples from context
+            4. Write in direct, factual language with clear evidence
+            5. Each section should provide distinct information
             
-            Structure your response to include:
+            Structure your response as follows:
             
             **Direct Answer**
-            Provide a detailed, complete answer to the question in 1-2 full paragraphs. Include specific company names, figures, and context.
+            Write 2-4 sentences providing a clear, specific answer to the question. Include company names, figures, and direct context.
             
-            **Supporting Evidence and Examples**
-            Write 1-2 paragraphs providing specific examples, data points, and evidence from the context that support your answer.
+            **Supporting Evidence**
+            Write 2-3 sentences providing specific examples and data points that support your answer.
             
-            **Related Implications and Considerations**
-            Write 1 paragraph discussing the broader implications and what this means for the company's strategy or market position.
+            **Strategic Context**
+            Write 2-4 sentences explaining what this means for the company's strategy or market position.
             
-            **Additional Relevant Insights**
-            Write 1 paragraph with additional context or related information that adds value to the answer.
+            **Additional Insights**
+            Write 2-3 sentences with related information that adds value to understanding the answer.
             
             Context:
             {context}
 
             Question: {query}
 
-            Remember: Write complete, full sentences. Use specific company names. Provide detailed analysis with supporting evidence.
+            Remember: Keep each section to 2-5 sentences maximum. Use specific company names and concrete evidence.
         """)
 
         self.extraction_prompt = ChatPromptTemplate.from_template("""
-            Extract and analyze all relevant metrics and data points from the context.
+            Extract and analyze key metrics and data points from the context.
             
             CRITICAL REQUIREMENTS:
-            1. Write 4-6 full paragraphs with complete sentences - NO abbreviations or trailing dots
-            2. Use the actual company name from the context - NEVER use "The company" or generic terms
-            3. Include specific details, numbers, dates, and context for each metric
-            4. Write in full, complete sentences with proper analysis
-            5. Provide interpretation and significance for each data point
+            1. Use actual company names from context - NEVER "The company" or generic terms
+            2. Write 2-5 complete sentences per section - NO MORE
+            3. Include specific numbers, dates, and context for each metric
+            4. Write in direct, analytical language with clear interpretation
+            5. Focus on the most strategically important data points
             
             Structure your response as follows:
             
             **Key Performance Indicators**
-            Write 1-2 paragraphs providing detailed breakdown of each financial and operational metric. Include historical context, trends, and what each number means for the business. Use specific company names and provide full analysis.
+            Write 2-4 sentences covering the most important financial and operational metrics. Include specific numbers, context, and what they mean for the business.
             
-            **Market and Competition Metrics**
-            Write 1-2 paragraphs covering market share data, competitive positioning, and industry benchmarks. Explain how the company compares to competitors and what the market dynamics mean.
+            **Market and Competition Data**
+            Write 2-3 sentences covering market share, competitive positioning, and industry benchmarks. Compare to competitors where possible.
             
-            **Financial and Operational Analysis**
-            Write 1-2 paragraphs with detailed financial analysis, operational performance indicators, and growth metrics. Include year-over-year comparisons and trend analysis.
+            **Financial and Operational Metrics**
+            Write 2-4 sentences with key financial performance indicators and growth metrics. Include year-over-year comparisons and trends.
             
-            **Strategic Implications of the Data**
-            Write 1 paragraph analyzing what these metrics collectively tell us about the company's strategic position and future prospects.
+            **Strategic Implications**
+            Write 2-3 sentences analyzing what these metrics reveal about the company's strategic position and future prospects.
             
             Context:
             {context}
 
             Data to extract: {query}
 
-            Remember: Write complete, full sentences. Use specific company names. Provide detailed analysis and interpretation for each metric.
+            Remember: Keep each section to 2-5 sentences maximum. Focus on metrics that drive strategic decisions.
         """)
 
     async def _execute_with_timeout(self, func, *args, **kwargs):
@@ -349,31 +333,14 @@ class QueryEngine:
 
     def generate_response(self, query: str, context: List[str],
                          intent: Optional[QueryIntent] = None,
-                         progress_callback: Optional[callable] = None) -> str:
-        """
-        Generate a response using the appropriate prompt template.
-        
-        Args:
-            query: User's input query
-            context: Retrieved context chunks
-            intent: Optional pre-classified intent
-            progress_callback: Optional callback function to report progress
-            
-        Returns:
-            Generated response string
-        """
-        start_time = time.time()
-        
+                         progress_callback: Optional[Callable[[str], None]] = None) -> str:
+        """Generate a response using the appropriate prompt based on intent."""
         try:
-            # Classify intent if not provided
-            if intent is None:
-                if progress_callback:
-                    progress_callback("Classifying query intent...")
+            if not intent:
                 intent = self.classify_intent(query)
             
-            # Select appropriate prompt template
             if progress_callback:
-                progress_callback("Preparing response generation...")
+                progress_callback(f"Generating {intent.value} response...")
             
             if intent == QueryIntent.SUMMARY:
                 prompt = self.summary_prompt
@@ -382,26 +349,17 @@ class QueryEngine:
             elif intent == QueryIntent.DATA_EXTRACTION:
                 prompt = self.extraction_prompt
             else:
-                prompt = self.qa_prompt  # Default to QA prompt
-            
-            # Join context chunks with separators and add company context
-            formatted_context = self.company_context + "\n\n---\n\n" + "\n\n---\n\n".join(context)
-            
-            # Generate response
-            if progress_callback:
-                progress_callback("Generating response...")
+                prompt = self.summary_prompt
             
             chain = prompt | self.llm | self.output_parser
-            response = chain.invoke({
-                "context": formatted_context,
-                "query": query
+            
+            return chain.invoke({
+                "query": query,
+                "context": "\n\n".join(context)
             })
             
-            logger.info(f"Response generation completed in {time.time() - start_time:.2f} seconds")
-            return response
-            
         except Exception as e:
-            logger.error(f"Response generation failed: {str(e)}")
+            logger.error(f"Error generating response: {str(e)}")
             raise
 
     def evaluate_response(self, query: str, response: str,
