@@ -239,113 +239,103 @@ class QueryEngine:
         """
         prompts = {
             "executive_summary": """
-                Generate a focused executive summary for a strategic flash report.
+                Write a strategic executive summary for a flash report - NOT an essay.
                 
                 CRITICAL REQUIREMENTS:
-                1. Write EXACTLY 2 focused paragraphs (80-100 words each)
-                2. Use the actual company name from the context - NEVER use "The company" or generic terms
-                3. Focus on the most impactful strategic information for executive decision-making
-                4. Include only the most critical numbers, dates, and strategic developments
-                5. Do NOT use markdown headers or bullet points
-                6. Write for senior strategy teams who need actionable insights
+                1. Write EXACTLY 2 paragraphs (75-90 words each) - NO MORE, NO LESS
+                2. Use actual company names from context - NEVER "The company" or generic terms
+                3. NO essay structure, NO conclusions, NO "In summary", NO "Overall"
+                4. Each paragraph tells its own focused story with specific facts
+                5. Direct, factual language - avoid academic or flowery writing
+                6. Include specific numbers, dates, and strategic developments only
                 
-                Structure for strategic impact:
+                Paragraph 1: State the most critical recent development that changes the competitive game. Include specific company name, date, financial figure, and why this matters strategically.
                 
-                First paragraph: Most significant recent strategic developments, key financial metrics, and major business changes that impact competitive position. Include specific company names, dates, and the strategic significance of each development.
-                
-                Second paragraph: Critical strategic implications and most important opportunities or risks that require executive attention. Focus on what strategy teams need to know for decision-making.
+                Paragraph 2: Identify the single most important strategic implication or risk that executives must address. Be specific about impact and urgency.
                 
                 Context: {context}
                 
-                Remember: Prioritize strategic impact over comprehensive detail. Focus on what matters most for executive decision-making.
+                Write like you're briefing a CEO who has 30 seconds to read this.
             """,
             
             "company_overview": """
-                Provide a strategic company overview for a flash report.
+                Write a strategic company overview for a flash report - NOT an essay.
                 
                 CRITICAL REQUIREMENTS:
-                1. Write EXACTLY 2 focused paragraphs (80-100 words each)
-                2. Use the actual company name from the context - NEVER use "The company" or generic terms
-                3. Focus on business model and strategic positioning elements most relevant to strategy teams
-                4. Emphasize competitive advantages and strategic differentiators
-                5. Do NOT use markdown headers or bullet points
-                6. Write for senior executives who need strategic context
+                1. Write EXACTLY 2 paragraphs (75-90 words each) - NO MORE, NO LESS
+                2. Use actual company names from context - NEVER "The company" or generic terms
+                3. NO essay structure, NO conclusions, NO "In summary", NO "To conclude"
+                4. Each paragraph tells its own focused story with specific facts
+                5. Direct, factual language - avoid generic business speak
+                6. Focus only on elements that create competitive advantage
                 
-                Structure for strategic value:
+                Paragraph 1: State the core business model and primary revenue engine. Name specific business segments and quantify their contribution to competitive position.
                 
-                First paragraph: Core business model, primary revenue streams, and key strategic positions in the market. Include specific business segments and how they create competitive advantage.
-                
-                Second paragraph: Most important recent strategic developments, acquisitions, or changes that have reshaped the company's competitive position and market approach.
+                Paragraph 2: Highlight the most significant recent strategic move that reshapes how they compete. Include specifics on what changed and strategic impact.
                 
                 Context: {context}
                 
-                Remember: Focus on strategic elements that impact competitive positioning and market opportunities.
+                Write like you're explaining to a competitor analysis team.
             """,
             
             "core_offerings": """
-                Provide a strategic analysis of key products and services for a flash report.
+                Write a strategic offerings analysis for a flash report - NOT an essay.
                 
                 CRITICAL REQUIREMENTS:
-                1. Write EXACTLY 2 focused paragraphs (80-100 words each)
-                2. Use the actual company name from the context - NEVER use "The company" or generic terms
-                3. Focus on products/services that provide strategic advantage or drive growth
-                4. Emphasize competitive differentiation and market impact
-                5. Do NOT use markdown headers or bullet points
-                6. Write for strategy teams evaluating competitive threats and opportunities
+                1. Write EXACTLY 2 paragraphs (75-90 words each) - NO MORE, NO LESS
+                2. Use actual company and product names from context - be specific
+                3. NO essay structure, NO conclusions, NO "In conclusion", NO "Overall"
+                4. Each paragraph tells its own focused story with specific facts
+                5. Direct, factual language - avoid marketing speak
+                6. Focus only on offerings that drive strategic advantage
                 
-                Structure for strategic relevance:
+                Paragraph 1: Name the 2-3 most strategically important products/services and state exactly how they create competitive differentiation. Include specific features or capabilities.
                 
-                First paragraph: Most strategically important products or services, their competitive advantages, and how they drive market position. Include specific product names and their strategic significance.
-                
-                Second paragraph: Recent product developments, launches, or innovations that create new competitive advantages or market opportunities, and their potential strategic impact.
+                Paragraph 2: Identify the most significant recent product development and quantify its strategic impact on market position or growth potential.
                 
                 Context: {context}
                 
-                Remember: Focus on offerings that matter most for competitive strategy and market positioning.
+                Write like you're briefing a product strategy team.
             """,
             
             "market_position": """
-                Deliver a strategic market position analysis for a flash report.
+                Write a strategic market position analysis for a flash report - NOT an essay.
                 
                 CRITICAL REQUIREMENTS:
-                1. Write EXACTLY 2 focused paragraphs (80-100 words each)
-                2. Use the actual company name from the context - NEVER use "The company" or generic terms
-                3. Focus on competitive positioning and strategic market advantages
-                4. Emphasize market share dynamics and competitive threats/opportunities
-                5. Do NOT use markdown headers or bullet points
-                6. Write for executives making competitive strategy decisions
+                1. Write EXACTLY 2 paragraphs (75-90 words each) - NO MORE, NO LESS
+                2. Use actual company and competitor names from context - be specific
+                3. NO essay structure, NO conclusions, NO "In summary", NO "Therefore"
+                4. Each paragraph tells its own focused story with specific facts
+                5. Direct, factual language - avoid consultant speak
+                6. Include specific market share numbers or competitive metrics
                 
-                Structure for strategic insight:
+                Paragraph 1: State current market position versus named competitors. Include specific market share, ranking, or competitive metrics that matter strategically.
                 
-                First paragraph: Current competitive position, market share dynamics, and key competitive advantages or vulnerabilities. Include specific competitor names and market positioning.
-                
-                Second paragraph: Most significant market trends and competitive threats or opportunities that could impact strategic positioning and require strategic response.
+                Paragraph 2: Identify the most significant competitive threat or opportunity facing them right now. Name the competitor and quantify the strategic risk or opportunity.
                 
                 Context: {context}
                 
-                Remember: Focus on competitive dynamics that impact strategic decision-making and market opportunities.
+                Write like you're briefing a competitive intelligence team.
             """,
             
             "strategic_insights": """
-                Provide focused strategic insights and recommendations for a flash report.
+                Write strategic insights for a flash report - NOT an essay.
                 
                 CRITICAL REQUIREMENTS:
-                1. Write EXACTLY 2 focused paragraphs (80-100 words each)
-                2. Use the actual company name from the context - NEVER use "The company" or generic terms
-                3. Focus on the most critical strategic opportunities and risks
-                4. Provide specific, actionable strategic recommendations
-                5. Do NOT use markdown headers or bullet points
-                6. Write for senior executives making strategic decisions
+                1. Write EXACTLY 2 paragraphs (75-90 words each) - NO MORE, NO LESS
+                2. Use actual company names from context - be specific
+                3. NO essay structure, NO conclusions, NO "In conclusion", NO "To summarize"
+                4. Each paragraph tells its own focused story with specific recommendations
+                5. Direct, actionable language - avoid generic strategy speak
+                6. Provide specific strategic recommendations, not broad observations
                 
-                Structure for strategic action:
+                Paragraph 1: State the single most critical strategic opportunity they should pursue immediately. Be specific about the opportunity, timeline, and potential impact.
                 
-                First paragraph: Most significant strategic opportunities and strengths that should be prioritized, with specific recommendations for how to capitalize on them for competitive advantage.
-                
-                Second paragraph: Most critical strategic risks or challenges that require immediate attention, with specific recommendations for mitigation or strategic response.
+                Paragraph 2: Identify the most significant strategic risk they must address. Name the specific threat, timeline, and recommended response.
                 
                 Context: {context}
                 
-                Remember: Focus on actionable strategic insights that drive executive decision-making and competitive advantage.
+                Write like you're giving direct recommendations to the CEO.
             """
         }
         
