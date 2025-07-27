@@ -57,46 +57,46 @@ class ReportGenerator:
         """Set up document styles for one-page format."""
         # Title style (smaller than before)
         title_style = self.doc.styles.add_style('NorstTitle', WD_STYLE_TYPE.PARAGRAPH)
-        title_style.font.name = 'Segoe UI'
-        title_style.font.size = Pt(18)  # Reduced from 24
-        title_style.font.bold = True
-        title_style.font.color.rgb = self.NORSTELLA_BLUE
-        title_style.paragraph_format.space_before = Pt(12)
-        title_style.paragraph_format.space_after = Pt(6)
-        title_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        title_style.font.name = 'Segoe UI'  # type: ignore
+        title_style.font.size = Pt(18)  # Reduced from 24  # type: ignore
+        title_style.font.bold = True  # type: ignore
+        title_style.font.color.rgb = self.NORSTELLA_BLUE  # type: ignore
+        title_style.paragraph_format.space_before = Pt(12)  # type: ignore
+        title_style.paragraph_format.space_after = Pt(6)  # type: ignore
+        title_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER  # type: ignore
         
         # Subtitle style (smaller)
         subtitle_style = self.doc.styles.add_style('NorstSubtitle', WD_STYLE_TYPE.PARAGRAPH)
-        subtitle_style.font.name = 'Segoe UI'
-        subtitle_style.font.size = Pt(12)  # Reduced from 16
-        subtitle_style.font.color.rgb = self.NORSTELLA_GRAY
-        subtitle_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        subtitle_style.paragraph_format.space_after = Pt(12)
+        subtitle_style.font.name = 'Segoe UI'  # type: ignore
+        subtitle_style.font.size = Pt(12)  # Reduced from 16  # type: ignore
+        subtitle_style.font.color.rgb = self.NORSTELLA_GRAY  # type: ignore
+        subtitle_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER  # type: ignore
+        subtitle_style.paragraph_format.space_after = Pt(12)  # type: ignore
         
         # Section header style (smaller)
         header_style = self.doc.styles.add_style('NorstHeader', WD_STYLE_TYPE.PARAGRAPH)
-        header_style.font.name = 'Segoe UI'
-        header_style.font.size = Pt(11)  # Reduced from 14
-        header_style.font.bold = True
-        header_style.font.color.rgb = self.NORSTELLA_BLUE
-        header_style.paragraph_format.space_before = Pt(6)
-        header_style.paragraph_format.space_after = Pt(3)
+        header_style.font.name = 'Segoe UI'  # type: ignore
+        header_style.font.size = Pt(11)  # Reduced from 14  # type: ignore
+        header_style.font.bold = True  # type: ignore
+        header_style.font.color.rgb = self.NORSTELLA_BLUE  # type: ignore
+        header_style.paragraph_format.space_before = Pt(6)  # type: ignore
+        header_style.paragraph_format.space_after = Pt(3)  # type: ignore
         
         # Body style (compact)
         body_style = self.doc.styles.add_style('NorstBody', WD_STYLE_TYPE.PARAGRAPH)
-        body_style.font.name = 'Calibri'
-        body_style.font.size = Pt(10)  # Reduced from 11
-        body_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-        body_style.paragraph_format.line_spacing = 1.0  # Single spacing
-        body_style.paragraph_format.space_after = Pt(3)
+        body_style.font.name = 'Calibri'  # type: ignore
+        body_style.font.size = Pt(10)  # Reduced from 11  # type: ignore
+        body_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY  # type: ignore
+        body_style.paragraph_format.line_spacing = 1.0  # Single spacing  # type: ignore
+        body_style.paragraph_format.space_after = Pt(3)  # type: ignore
         
         # List style (compact)
         list_style = self.doc.styles.add_style('NorstList', WD_STYLE_TYPE.PARAGRAPH)
-        list_style.font.name = 'Calibri'
-        list_style.font.size = Pt(10)
-        list_style.paragraph_format.line_spacing = 1.0
-        list_style.paragraph_format.left_indent = Inches(0.15)
-        list_style.paragraph_format.space_after = Pt(2)
+        list_style.font.name = 'Calibri'  # type: ignore
+        list_style.font.size = Pt(10)  # type: ignore
+        list_style.paragraph_format.line_spacing = 1.0  # type: ignore
+        list_style.paragraph_format.left_indent = Inches(0.15)  # type: ignore
+        list_style.paragraph_format.space_after = Pt(2)  # type: ignore
 
     def _parse_markdown_text(self, text: str, paragraph):
         """
@@ -250,6 +250,161 @@ class ReportGenerator:
         # Add subtitle if provided
         if subtitle:
             subtitle_para = self.doc.add_paragraph(subtitle, style='NorstSubtitle')
+    
+    def add_norstella_header(self, company_name: str, report_type: str = "Flash Report"):
+        """Add Norstella header with logo and report title."""
+        # Create a table for the header layout
+        header_table = self.doc.add_table(rows=1, cols=3)
+        header_table.style = 'Table Grid'
+        header_table.autofit = False
+        
+        # Set column widths (logo, title, empty)
+        header_table.columns[0].width = Inches(1.5)  # Logo column
+        header_table.columns[1].width = Inches(5.5)  # Title column
+        header_table.columns[2].width = Inches(1.5)  # Empty column
+        
+        # Add logo to first cell
+        logo_cell = header_table.cell(0, 0)
+        try:
+            logo_path = TEMPLATE_PATH / "Images" / "Norstella_color_positive_RGB_(2).png"
+            if logo_path.exists():
+                logo_para = logo_cell.paragraphs[0]
+                logo_run = logo_para.add_run()
+                logo_run.add_picture(str(logo_path), width=Inches(1.2))
+        except Exception as e:
+            logger.warning(f"Could not add logo: {e}")
+            logo_cell.text = "NORSTELLA"
+        
+        # Add title to center cell
+        title_cell = header_table.cell(0, 1)
+        title_para = title_cell.paragraphs[0]
+        title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # Add company name and report type
+        company_run = title_para.add_run(f"{company_name} {report_type}")
+        company_run.font.name = 'Segoe UI'
+        company_run.font.size = Pt(16)
+        company_run.font.bold = True
+        company_run.font.color.rgb = self.NORSTELLA_BLUE
+        
+        # Add spacing after header
+        self.doc.add_paragraph()
+    
+    def add_three_column_layout(self, executive_summary: str, key_takeaways: str, financial_highlights: str):
+        """Add three-column layout matching the IQVIA report format."""
+        # Create main table for three-column layout
+        main_table = self.doc.add_table(rows=2, cols=2)
+        main_table.style = 'Table Grid'
+        main_table.autofit = False
+        
+        # Set column widths
+        main_table.columns[0].width = Inches(4.0)  # Left column (Executive Summary)
+        main_table.columns[1].width = Inches(4.0)  # Right column (Key Takeaways)
+        
+        # Set row heights
+        main_table.rows[0].height = Inches(4.0)  # Top row
+        main_table.rows[1].height = Inches(3.0)  # Bottom row (Financial Highlights)
+        
+        # Executive Summary (top left)
+        exec_cell = main_table.cell(0, 0)
+        exec_cell.vertical_alignment = WD_ALIGN_PARAGRAPH.TOP  # type: ignore
+        exec_para = exec_cell.paragraphs[0]
+        exec_run = exec_para.add_run("EXECUTIVE SUMMARY")
+        exec_run.font.name = 'Segoe UI'  # type: ignore
+        exec_run.font.size = Pt(12)  # type: ignore
+        exec_run.font.bold = True  # type: ignore
+        exec_run.font.color.rgb = self.NORSTELLA_BLUE  # type: ignore
+        
+        # Add executive summary content
+        exec_content_para = exec_cell.add_paragraph()
+        exec_content_para.style = 'NorstBody'
+        self._add_formatted_text_to_paragraph(executive_summary, exec_content_para)
+        
+        # Key Takeaways (top right)
+        key_cell = main_table.cell(0, 1)
+        key_cell.vertical_alignment = WD_ALIGN_PARAGRAPH.TOP  # type: ignore
+        key_para = key_cell.paragraphs[0]
+        key_run = key_para.add_run("KEY TAKEAWAYS")
+        key_run.font.name = 'Segoe UI'  # type: ignore
+        key_run.font.size = Pt(12)  # type: ignore
+        key_run.font.bold = True  # type: ignore
+        key_run.font.color.rgb = self.NORSTELLA_BLUE  # type: ignore
+        
+        # Add key takeaways content
+        key_content_para = key_cell.add_paragraph()
+        key_content_para.style = 'NorstBody'
+        self._add_formatted_text_to_paragraph(key_takeaways, key_content_para)
+        
+        # Financial Highlights (bottom, spanning both columns)
+        financial_cell = main_table.cell(1, 0)
+        financial_cell.merge(main_table.cell(1, 1))  # Merge bottom row
+        financial_cell.vertical_alignment = WD_ALIGN_PARAGRAPH.TOP  # type: ignore
+        
+        financial_para = financial_cell.paragraphs[0]
+        financial_run = financial_para.add_run("FINANCIAL HIGHLIGHTS")
+        financial_run.font.name = 'Segoe UI'
+        financial_run.font.size = Pt(12)
+        financial_run.font.bold = True
+        financial_run.font.color.rgb = self.NORSTELLA_BLUE
+        
+        # Add financial highlights content
+        financial_content_para = financial_cell.add_paragraph()
+        financial_content_para.style = 'NorstBody'
+        self._add_formatted_text_to_paragraph(financial_highlights, financial_content_para)
+    
+    def _add_formatted_text_to_paragraph(self, text: str, paragraph):
+        """Add formatted text to an existing paragraph."""
+        # Clean up the text
+        text = text.strip()
+        if not text:
+            return
+        
+        # Parse and add the formatted text
+        self._parse_markdown_text(text, paragraph)
+    
+    def add_footer(self):
+        """Add footer with confidential notice and footnotes."""
+        # Add spacing
+        self.doc.add_paragraph()
+        
+        # Add confidential notice
+        confidential_para = self.doc.add_paragraph()
+        confidential_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        confidential_run = confidential_para.add_run("CONFIDENTIAL AND PROPRIETARY")
+        confidential_run.font.name = 'Segoe UI'
+        confidential_run.font.size = Pt(8)
+        confidential_run.font.color.rgb = self.NORSTELLA_GRAY
+        
+        # Add footnotes section
+        footnotes_para = self.doc.add_paragraph()
+        footnotes_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        footnotes_run = footnotes_para.add_run("Footnotes:")
+        footnotes_run.font.name = 'Segoe UI'
+        footnotes_run.font.size = Pt(8)
+        footnotes_run.font.bold = True
+        footnotes_run.font.color.rgb = self.NORSTELLA_GRAY
+        
+        # Add sample footnotes (these would be dynamic based on content)
+        footnote1 = self.doc.add_paragraph()
+        footnote1.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        footnote1_run = footnote1.add_run("* Technology & Analytics Solutions")
+        footnote1_run.font.name = 'Segoe UI'
+        footnote1_run.font.size = Pt(8)
+        footnote1_run.font.color.rgb = self.NORSTELLA_GRAY
+        
+        footnote2 = self.doc.add_paragraph()
+        footnote2.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        footnote2_run = footnote2.add_run("** Research & Development Solutions")
+        footnote2_run.font.name = 'Segoe UI'
+        footnote2_run.font.size = Pt(8)
+        footnote2_run.font.color.rgb = self.NORSTELLA_GRAY
+        
+        footnote3 = self.doc.add_paragraph()
+        footnote3.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        footnote3_run = footnote3.add_run("*** Contract Sales & Medical Solutions")
+        footnote3_run.font.name = 'Segoe UI'
+        footnote3_run.font.size = Pt(8)
+        footnote3_run.font.color.rgb = self.NORSTELLA_GRAY
 
     def save(self, filename: str):
         """Save the document to a file."""

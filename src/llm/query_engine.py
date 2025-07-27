@@ -320,6 +320,90 @@ class QueryEngine:
                 Context: {context}
                 
                 Write like you're giving direct recommendations to the CEO.
+            """,
+            
+            "executive_summary_new": """
+                Write an executive summary for the left column of a flash report.
+                
+                CRITICAL REQUIREMENTS:
+                1. Write 3-4 concise bullet points with 1-2 sentences each
+                2. Use actual company names from context - be specific
+                3. Focus on the most critical recent developments
+                4. Include specific numbers, dates, and strategic facts
+                5. Each bullet should be a standalone strategic insight
+                
+                Format as bullet points:
+                • [Most critical development with specific facts]
+                • [Key strategic implication with numbers]
+                • [Important competitive move or market change]
+                • [Critical risk or opportunity executives must address]
+                
+                Context: {context}
+                
+                Write like you're briefing a CEO who has 30 seconds to read this.
+            """,
+            
+            "key_takeaways": """
+                Write key takeaways for the right column of a flash report.
+                
+                CRITICAL REQUIREMENTS:
+                1. Write 4-5 concise bullet points with 1-2 sentences each
+                2. Use actual company names from context - be specific
+                3. Focus on actionable insights and strategic implications
+                4. Include specific metrics, trends, and competitive dynamics
+                5. Each bullet should provide a clear strategic insight
+                
+                Format as bullet points:
+                • [Key performance metric or trend]
+                • [Strategic initiative or investment]
+                • [Market position or competitive advantage]
+                • [Risk factor or challenge]
+                • [Future outlook or prediction]
+                
+                Context: {context}
+                
+                Write like you're briefing a strategy team.
+            """,
+            
+            "financial_highlights": """
+                Write financial highlights for the bottom section of a flash report.
+                
+                CRITICAL REQUIREMENTS:
+                1. Write 3-4 concise bullet points with 1-2 sentences each
+                2. Use actual company names and specific financial figures
+                3. Focus on revenue, earnings, and key financial metrics
+                4. Include year-over-year comparisons and growth rates
+                5. Highlight the most significant financial developments
+                
+                Format as bullet points:
+                • [Revenue performance with specific numbers]
+                • [Earnings or profitability metrics]
+                • [Key financial ratios or trends]
+                • [Cash flow or balance sheet highlights]
+                
+                Context: {context}
+                
+                Write like you're briefing a CFO.
+            """,
+            
+            "strategic_insights": """
+                Write strategic insights for a flash report - NOT an essay.
+                
+                CRITICAL REQUIREMENTS:
+                1. Write EXACTLY 2 paragraphs (75-90 words each) - NO MORE, NO LESS
+                2. Use actual company names from context - be specific
+                3. NO essay structure, NO conclusions, NO "In conclusion", NO "To summarize"
+                4. Each paragraph tells its own focused story with specific recommendations
+                5. Direct, actionable language - avoid generic strategy speak
+                6. Provide specific strategic recommendations, not broad observations
+                
+                Paragraph 1: State the single most critical strategic opportunity they should pursue immediately. Be specific about the opportunity, timeline, and potential impact.
+                
+                Paragraph 2: Identify the most significant strategic risk they must address. Name the specific threat, timeline, and recommended response.
+                
+                Context: {context}
+                
+                Write like you're giving direct recommendations to the CEO.
             """
         }
         
