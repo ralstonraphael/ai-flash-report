@@ -28,7 +28,7 @@ def render_minimal_sidebar():
     """Render minimal sidebar controls."""
     
     with st.sidebar:
-        st.markdown("### 🤖 AI Assistant")
+        st.markdown("### 🔬 AI Analysis")
         
         # Simple tone selector
         tone_options = {
@@ -71,18 +71,18 @@ def render_minimal_sidebar():
 def render_welcome_message():
     """Render welcome message for new chats."""
     
-    with st.chat_message("assistant", avatar="🤖"):
+    with st.chat_message("assistant", avatar="🔬"):
         tone_name = st.session_state.get('conversation_tone', ConversationTone.PROFESSIONAL).value
         st.write(f"""
-        Hello! I'm your AI business analyst. I've analyzed your documents and I'm ready to help in a **{tone_name}** style.
+        **Norstella AI Ready** • *{tone_name} mode*
         
-        **What I can help with:**
-        • Quick summaries and key insights
-        • Deep analysis and strategic recommendations  
-        • Financial metrics and trend analysis
-        • Competitive intelligence and market insights
+        I've analyzed your documents. Ask me about:
+        • Key insights & summaries
+        • Strategic analysis  
+        • Financial metrics
+        • Market intelligence
         
-        What would you like to explore?
+        What would you like to know?
         """)
 
 def render_suggested_starters():
@@ -91,13 +91,13 @@ def render_suggested_starters():
     if st.session_state.chat_messages:
         return  # Only show on empty chat
         
-    st.markdown("**💡 Try asking:**")
+    st.markdown("**💡 Quick starts:**")
     
     suggestions = [
-        "What are the key highlights?",
-        "Give me a strategic analysis",
-        "Extract the financial metrics",
-        "What are the main risks and opportunities?"
+        "Key highlights?",
+        "Strategic analysis?", 
+        "Financial metrics?",
+        "Risks & opportunities?"
     ]
     
     cols = st.columns(2)

@@ -30,11 +30,138 @@ import re
 
 # Configure Streamlit for larger file uploads
 st.set_page_config(
-    page_title="AI Flash Report Generator",
-    page_icon="📊",
+    page_title="Norstella AI Flash Reports",
+    page_icon="🔬",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Norstella Color Scheme and Custom CSS
+st.markdown("""
+<style>
+    /* Norstella Brand Colors */
+    :root {
+        --norstella-teal: #00A3A3;
+        --norstella-dark-teal: #008080;
+        --norstella-light-teal: #B3E5E5;
+        --norstella-navy: #1F3A93;
+        --norstella-gray: #4A5568;
+        --norstella-light-gray: #F7FAFC;
+    }
+    
+    /* Main app styling */
+    .stApp {
+        background: linear-gradient(135deg, var(--norstella-light-gray) 0%, #ffffff 100%);
+    }
+    
+    /* Header styling */
+    .main-header {
+        background: linear-gradient(90deg, var(--norstella-teal) 0%, var(--norstella-dark-teal) 100%);
+        padding: 2rem 0;
+        margin: -1rem -1rem 2rem -1rem;
+        border-radius: 0 0 15px 15px;
+        color: white;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(0, 163, 163, 0.3);
+    }
+    
+    /* Tab styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
+        background-color: var(--norstella-light-gray);
+        border-radius: 10px;
+        padding: 5px;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        background-color: white;
+        border-radius: 8px;
+        padding: 10px 20px;
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(90deg, var(--norstella-teal) 0%, var(--norstella-dark-teal) 100%);
+        color: white !important;
+        border: 2px solid var(--norstella-dark-teal);
+    }
+    
+    /* Button styling */
+    .stButton > button {
+        background: linear-gradient(90deg, var(--norstella-teal) 0%, var(--norstella-dark-teal) 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 163, 163, 0.4);
+    }
+    
+    /* Info boxes */
+    .stInfo {
+        background-color: var(--norstella-light-teal);
+        border-left: 4px solid var(--norstella-teal);
+        border-radius: 8px;
+    }
+    
+    /* Success boxes */
+    .stSuccess {
+        background-color: #E6FFFA;
+        border-left: 4px solid var(--norstella-teal);
+        border-radius: 8px;
+    }
+    
+    /* Metrics */
+    .metric-container {
+        background: white;
+        padding: 1rem;
+        border-radius: 10px;
+        border-left: 4px solid var(--norstella-teal);
+        box-shadow: 0 2px 10px rgba(0, 163, 163, 0.1);
+    }
+    
+    /* Chat messages */
+    .stChatMessage {
+        border-radius: 10px;
+        margin-bottom: 1rem;
+    }
+    
+    /* Sidebar */
+    .css-1d391kg {
+        background: linear-gradient(180deg, var(--norstella-light-gray) 0%, white 100%);
+    }
+    
+    /* File uploader */
+    .stFileUploader {
+        border: 2px dashed var(--norstella-teal);
+        border-radius: 10px;
+        background-color: var(--norstella-light-teal);
+        padding: 2rem;
+    }
+    
+    /* Progress bars */
+    .stProgress .st-bo {
+        background-color: var(--norstella-teal);
+    }
+    
+    /* Expander */
+    .streamlit-expanderHeader {
+        background-color: var(--norstella-light-gray);
+        border-radius: 8px;
+    }
+    
+    /* Hide Streamlit branding */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+</style>
+""", unsafe_allow_html=True)
 
 # Set maximum upload size to 200MB (default is 200MB, but we'll be explicit)
 # This should easily handle 19-page PDFs which are typically 5-20MB
@@ -120,8 +247,13 @@ def init_session_state():
 
 def setup_page():
     """Set up the main page layout and title."""
-    st.title("📊 AI Flash Report Generator")
-    st.markdown("Transform your documents into comprehensive insights through conversational AI analysis and professional reports")
+    # Clean Norstella header
+    st.markdown("""
+    <div class="main-header">
+        <h1 style="margin: 0; font-size: 2.8rem; font-weight: 700;">🔬 Norstella AI Flash Reports</h1>
+        <p style="margin: 0.5rem 0 0 0; font-size: 1.1rem; opacity: 0.95;">Strategic intelligence from your business documents</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 def check_api_key():
     """Check if OpenAI API key is configured."""
@@ -149,47 +281,29 @@ def format_file_size(size_bytes):
 
 def upload_section():
     """Handle document uploads."""
-    st.subheader("📁 Upload Documents")
+    st.markdown("### 📁 Upload Your Documents")
     
-    # Add upload troubleshooting with more options
-    col1, col2, col3 = st.columns(3)
+    # Simplified controls
+    col1, col2 = st.columns([3, 1])
     with col1:
-        if st.button("🔄 Reset Upload", help="Click if files aren't uploading properly"):
-            # Clear all upload-related session state
+        st.markdown("**Status:** 🟢 Ready")
+    with col2:
+        if st.button("🔄 Reset", help="Reset if needed"):
             for key in list(st.session_state.keys()):
-                if 'uploader' in str(key) or 'upload' in str(key):
+                if 'uploader' in str(key):
                     del st.session_state[key]
             st.rerun()
     
-    with col2:
-        if st.button("🧹 Clear Cache", help="Clear all cached data"):
-            st.cache_data.clear()
-            st.cache_resource.clear()
-            st.success("Cache cleared!")
-    
-    with col3:
-        if st.button("🔄 Restart App", help="Force restart the app"):
-            st.rerun()
-    
-    # Add connection status indicator
-    st.markdown("**Connection Status:** 🟢 Connected")
-    
-    # Create a unique key for the file uploader to prevent caching issues
+    # Clean file uploader
     uploader_key = f"doc_uploader_{datetime.datetime.now().strftime('%Y%m%d_%H')}"
     
-    # Simple, clean file uploader with better error handling
-    try:
-        uploaded_files = st.file_uploader(
-            "Choose your documents",
-            type=["pdf", "docx", "csv"],
-            accept_multiple_files=True,
-            key=uploader_key,
-            help="Select PDF, DOCX, or CSV files (max 200MB each)"
-        )
-    except Exception as e:
-        st.error(f"File uploader error: {str(e)}")
-        st.info("Try refreshing the page or using the Reset Upload button above")
-        return
+    uploaded_files = st.file_uploader(
+        "Drop your files here",
+        type=["pdf", "docx", "csv"],
+        accept_multiple_files=True,
+        key=uploader_key,
+        help="PDF, Word, or CSV files (max 200MB each)"
+    )
     
     # Debug information for troubleshooting
     debug_mode = st.checkbox("Show debug info", help="Check this if you're having upload issues")
@@ -395,19 +509,18 @@ def upload_section():
         # Simple help text
         st.info("📁 Select PDF, DOCX, or CSV files to get started")
         
-        # Show supported formats and new features in sidebar
+        # Simplified sidebar help
         st.sidebar.markdown("""
-        ### 📋 Supported Formats
-        - **PDF** (.pdf) - Up to 200MB
-        - **Word** (.docx) - Up to 200MB  
-        - **CSV** (.csv) - Up to 200MB
+        ### 🔬 Norstella AI Assistant
         
-        ### 💬 New! AI Chat Analysis
-        After uploading, chat with your documents using:
-        - **Natural conversation** - Ask questions like you would to a colleague
-        - **Multiple tones** - Professional, Friendly, Analytical, Creative, Executive
-        - **Smart follow-ups** - AI suggests relevant next questions
-        - **Conversation memory** - Builds on previous exchanges
+        **Supported Files:**
+        PDF, Word, CSV (up to 200MB)
+        
+        **AI Features:**
+        • Smart document analysis
+        • Multiple conversation styles  
+        • Strategic report generation
+        • Conversational memory
         """)
         
         # Enhanced troubleshooting tips
@@ -449,14 +562,13 @@ def analysis_section():
 def report_section():
     """Handle report generation."""
     if not st.session_state.documents_loaded:
-        st.info("⚠️ Please upload and process documents first")
+        st.info("⚠️ Upload documents first")
         return
     
-    st.subheader("📊 Flash Report Generation")
+    st.markdown("### 📊 Generate Flash Report")
     
-    # Report configuration
-    st.markdown("### Report Configuration")
-    st.info("📄 Reports now generate comprehensive, full-length content with detailed analysis")
+    # Simple report configuration
+    st.markdown("**Configuration**")
     
     col1, col2 = st.columns(2)
     
@@ -475,25 +587,19 @@ def report_section():
             help="Enter the date for your report"
         )
     
-    # Section configuration
-    st.markdown("### Report Sections")
-    st.caption("Select sections to include (each section will provide comprehensive analysis)")
+    # Simplified section selection
+    st.markdown("**Report Sections**")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        include_exec_summary = st.checkbox("🧾 Executive Summary", value=True,
-            help="Comprehensive overview with detailed analysis (4-5 paragraphs)")
-        include_company = st.checkbox("🧭 Company Overview", value=True,
-            help="Detailed company analysis including business model and strategy (4-5 paragraphs)")
-        include_offerings = st.checkbox("📦 Core Offerings", value=True,
-            help="Thorough analysis of products and services (4-5 paragraphs)")
+        include_exec_summary = st.checkbox("🧾 Executive Summary", value=True)
+        include_company = st.checkbox("🧭 Company Overview", value=True)
+        include_offerings = st.checkbox("📦 Core Offerings", value=True)
     
     with col2:
-        include_market = st.checkbox("📈 Market Position", value=True,
-            help="Detailed competitive analysis and market positioning (4-5 paragraphs)")
-        include_insights = st.checkbox("🧠 Key Strategic Insights", value=True,
-            help="Comprehensive strategic recommendations and analysis (4-5 paragraphs)")
+        include_market = st.checkbox("📈 Market Position", value=True)
+        include_insights = st.checkbox("🧠 Strategic Insights", value=True)
     
     # Generate report button
     if st.button("Generate Report", type="primary"):
@@ -600,8 +706,8 @@ def main():
     if not check_api_key():
         return
     
-    # Navigation with enhanced conversational analysis
-    tab1, tab2, tab3 = st.tabs(["📁 Upload", "💬 AI Chat Analysis", "📊 Report"])
+    # Clean navigation
+    tab1, tab2, tab3 = st.tabs(["📁 Upload", "🔬 AI Analysis", "📊 Report"])
     
     with tab1:
         upload_section()
