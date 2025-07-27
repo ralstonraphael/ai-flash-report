@@ -5,8 +5,22 @@ Import this FIRST in your main app.
 """
 import sys
 import logging
+import os
+
+# Suppress torch-related warnings immediately
+os.environ["PYTHONWARNINGS"] = "ignore::UserWarning:torch"
+os.environ["TORCH_LOGS"] = "ERROR"
+
+# Optimize Streamlit performance
+os.environ["STREAMLIT_SERVER_FILE_WATCHER_TYPE"] = "none"
+os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
+os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
 
 logger = logging.getLogger(__name__)
+
+# Suppress torch logging
+logging.getLogger("torch").setLevel(logging.ERROR)
+logging.getLogger("torch.classes").setLevel(logging.ERROR)
 
 def fix_torch_classes_issue():
     """Comprehensively fix the torch._classes.__path__ issue for Streamlit."""
