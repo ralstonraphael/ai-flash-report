@@ -6,6 +6,28 @@ import os
 from pathlib import Path
 import logging
 
+# Import torch isolation fix FIRST before any other imports
+import os
+import sys
+
+# Comprehensive torch isolation
+os.environ.update({
+    "PYTHONWARNINGS": "ignore",
+    "TORCH_LOGS": "ERROR",
+    "CUDA_LAUNCH_BLOCKING": "0",
+    "TORCH_USE_CUDA_DSA": "0",
+    "TRITON_CACHE_DIR": "/tmp/triton_cache",
+    "STREAMLIT_SERVER_FILE_WATCHER_TYPE": "none"
+})
+
+# Apply torch watcher fix before any streamlit imports
+try:
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+    from fix_torch_watcher import apply_comprehensive_fix
+    apply_comprehensive_fix()
+except Exception as e:
+    print(f"Warning: Could not apply torch fixes: {e}")
+
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
