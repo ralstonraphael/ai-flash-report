@@ -145,13 +145,9 @@ class ConversationalEngine:
             ConversationIntent.CLARIFICATION: RAGStrategy.PRECISE,
         }
         
-        # Company context
-        self.company_context = """
-        Norstella is a global healthcare technology company formed through the combination of multiple industry-leading companies. 
-        Norstella provides technology-enabled solutions, analytics, and insights to help pharmaceutical, biotechnology, and medical device companies 
-        accelerate the development and commercialization of their products. The company serves as a strategic partner throughout the product lifecycle, 
-        from early-stage research and development through commercialization and market access.
-        """
+        # Company context - will be dynamically extracted from uploaded documents
+        self.company_context = ""
+        self.extracted_company_name = ""
         
         # Initialize enhanced prompts
         self._init_enhanced_prompts()
@@ -264,7 +260,11 @@ class ConversationalEngine:
             
             **User's Question:** {query}
             
-            **Instructions:**
+            **CRITICAL INSTRUCTIONS:**
+            - ONLY reference the company mentioned in the uploaded documents
+            - NEVER mention "Norstella" or any other company not in the documents
+            - Extract the actual company name from the document context
+            - If the company name is unclear, refer to it as "the company" or "this company"
             - Respond in a {style} manner that feels like a natural conversation
             - Reference the conversation history when relevant to show continuity
             - Use the document context to provide accurate, evidence-based responses
@@ -564,19 +564,65 @@ class ConversationalEngine:
         if not context:
             return "No specific document context available for this query."
         
-        # Add company context
-        formatted_context = f"**Company Background:**\n{self.company_context}\n\n"
+        # Extract company name from context if not already extracted
+        if not self.extracted_company_name:
+            self._extract_company_from_context(context)
         
         # Add conversation themes if available
+        themes_section = ""
         if self.conversation_themes:
-            formatted_context += f"**Conversation Themes:** {', '.join(self.conversation_themes)}\n\n"
+            themes_section = f"**Conversation Themes:** {', '.join(self.conversation_themes)}\n\n"
         
-        # Add document context
+        # Add document context with company identification
+        formatted_context = f"**IMPORTANT:** Only reference the company mentioned in the uploaded documents. "
+        if self.extracted_company_name:
+            formatted_context += f"The company being analyzed is: {self.extracted_company_name}\n\n"
+        else:
+            formatted_context += "Extract the company name from the provided context.\n\n"
+        
+        formatted_context += themes_section
         formatted_context += "**Relevant Document Context:**\n"
         for i, chunk in enumerate(context, 1):
             formatted_context += f"\n--- Context {i} ---\n{chunk}\n"
         
         return formatted_context
+    
+    def _extract_company_from_context(self, context: List[str]) -> None:
+        """Extract company name from the provided context using LLM."""
+        try:
+            # Combine all context chunks
+            full_context = "\n".join(context[:3])  # Use first 3 chunks to avoid token limits
+            
+            # Create extraction prompt
+            extraction_prompt = ChatPromptTemplate.from_template("""
+                Extract the company name from the following business document context.
+                
+                Instructions:
+                1. Look for the actual company name mentioned in the documents
+                2. Return ONLY the company name, nothing else
+                3. If multiple companies are mentioned, return the primary company being discussed
+                4. If no clear company name is found, return "Unknown Company"
+                
+                Document Context:
+                {context}
+                
+                Company Name:
+            """)
+            
+            # Extract company name
+            chain = extraction_prompt | self.llm | self.output_parser
+            company_name = chain.invoke({"context": full_context}).strip()
+            
+            # Clean up the response
+            if company_name and company_name.lower() != "unknown company":
+                self.extracted_company_name = company_name
+                logger.info(f"Extracted company name: {company_name}")
+            else:
+                self.extracted_company_name = "Unknown Company"
+                
+        except Exception as e:
+            logger.warning(f"Failed to extract company name: {e}")
+            self.extracted_company_name = "Unknown Company"
     
     def _add_to_history(self, user_message: str, assistant_response: str, 
                        intent: ConversationIntent, rag_strategy: RAGStrategy, context_count: int):
@@ -627,6 +673,7 @@ class ConversationalEngine:
         self.chat_history = []
         self.context_memory = {}
         self.conversation_themes = []
+        self.extracted_company_name = ""  # Reset company name for new documents
         logger.info("Enhanced conversation history cleared")
     
     def set_tone(self, tone: ConversationTone):
