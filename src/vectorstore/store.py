@@ -273,40 +273,74 @@ class VectorStore:
             logger.error(f"❌ Failed to load collection: {str(e)}")
             raise
 
-    def query_collection(self, query: str, k: int = 5) -> List[str]:
+    def query_collection(self, query: str, k: int = 5, score_threshold: float = 0.8) -> List[str]:
         """
-        Query using similarity search in Pinecone.
+        Query using similarity search in Pinecone with score filtering.
         
         Args:
             query: Search query string
             k: Number of results to return
+            score_threshold: Minimum similarity score (0.0 to 1.0). Only results above this threshold are returned.
             
         Returns:
-            List of relevant text chunks
+            List of relevant text chunks that meet the score threshold
         """
         if not self.vectorstore or not self.current_namespace:
             raise ValueError("No collection loaded. Call create_collection() or load_collection() first.")
             
-        logger.info(f"🔍 Querying namespace '{self.current_namespace}' with: {query}")
+        logger.info(f"🔍 Querying namespace '{self.current_namespace}' with: {query} (score >= {score_threshold})")
         
         try:
-            # Use LangChain wrapper for compatibility
-            results = self.vectorstore.similarity_search(query, k=k)
+            # Use similarity search with scores for filtering
+            results_with_scores = self.vectorstore.similarity_search_with_score(query, k=k*2)  # Get more results to filter
             
-            # Extract text content from results
+            # Filter by score threshold and extract text content
             documents = []
-            for doc in results:
-                if hasattr(doc, 'page_content') and doc.page_content:
-                    documents.append(doc.page_content)
-                elif hasattr(doc, 'metadata') and doc.metadata.get('text'):
-                    documents.append(doc.metadata['text'])
+            filtered_count = 0
             
-            logger.info(f"✅ Found {len(documents)} relevant documents")
+            for doc, score in results_with_scores:
+                # Convert distance to similarity score (depends on the metric used)
+                # For cosine similarity: similarity = 1 - distance
+                # For Pinecone, the score is typically already a similarity score
+                similarity_score = score if score <= 1.0 else 1.0 - score
+                
+                if similarity_score >= score_threshold:
+                    if hasattr(doc, 'page_content') and doc.page_content:
+                        documents.append(doc.page_content)
+                    elif hasattr(doc, 'metadata') and doc.metadata.get('text'):
+                        documents.append(doc.metadata['text'])
+                    
+                    # Limit to requested number of results
+                    if len(documents) >= k:
+                        break
+                else:
+                    filtered_count += 1
+            
+            logger.info(f"✅ Found {len(documents)} high-quality documents (filtered out {filtered_count} low-score results)")
+            
+            # If no results meet the threshold, log a warning but don't fail completely
+            if not documents and filtered_count > 0:
+                logger.warning(f"⚠️ No documents met the score threshold of {score_threshold}. Consider lowering the threshold.")
+            
             return documents
             
         except Exception as e:
             logger.error(f"❌ Query failed: {str(e)}")
-            raise
+            # Fallback to regular similarity search if score-based search fails
+            logger.info("🔄 Falling back to regular similarity search...")
+            try:
+                results = self.vectorstore.similarity_search(query, k=k)
+                documents = []
+                for doc in results:
+                    if hasattr(doc, 'page_content') and doc.page_content:
+                        documents.append(doc.page_content)
+                    elif hasattr(doc, 'metadata') and doc.metadata.get('text'):
+                        documents.append(doc.metadata['text'])
+                logger.info(f"✅ Fallback: Found {len(documents)} documents")
+                return documents
+            except Exception as fallback_error:
+                logger.error(f"❌ Fallback query also failed: {str(fallback_error)}")
+                raise
 
     def get_mmr_retriever(self, k: int = 5, lambda_mult: float = 0.5):
         """

@@ -54,6 +54,16 @@ def render_minimal_sidebar():
                 st.session_state.conv_engine.set_tone(new_tone)
             st.rerun()
         
+        # Similarity threshold control
+        st.session_state.similarity_threshold = st.slider(
+            "🎯 Similarity Threshold",
+            min_value=0.5,
+            max_value=1.0,
+            value=st.session_state.get('similarity_threshold', 0.8),
+            step=0.05,
+            help="Only retrieve documents with similarity score above this threshold. Higher = more precise, Lower = more comprehensive"
+        )
+        
         st.divider()
         
         # Simple stats
@@ -127,9 +137,10 @@ def process_user_message(user_input: str) -> Dict[str, Any]:
         with st.status("Thinking...", expanded=False) as status:
             status.write("🔍 Searching documents...")
             
-            # Get context from vectorstore
+            # Get context from vectorstore with user-defined threshold
             vs = st.session_state.vectorstore
-            context = vs.query_collection(user_input, k=6)
+            threshold = st.session_state.get('similarity_threshold', 0.8)
+            context = vs.query_collection(user_input, k=6, score_threshold=threshold)
             
             status.write("🧠 Generating response...")
             
@@ -138,7 +149,8 @@ def process_user_message(user_input: str) -> Dict[str, Any]:
             response, intent = engine.generate_response(
                 query=user_input,
                 vectorstore=vs,
-                progress_callback=lambda msg: status.write(msg)
+                progress_callback=lambda msg: status.write(msg),
+                score_threshold=threshold
             )
             
             status.write("✅ Done!")

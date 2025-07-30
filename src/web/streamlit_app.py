@@ -644,7 +644,8 @@ def report_section():
                 if include_exec_summary:
                     status.write("Generating executive summary...")
                     context = vs.query_collection(
-                        "Generate a comprehensive executive summary highlighting key changes, updates, and why they matter"
+                        "Generate a comprehensive executive summary highlighting key changes, updates, and why they matter",
+                        score_threshold=0.8
                     )
                     content = engine.generate_section_content("executive_summary", context)
                     if content and len(content.strip()) > 50:
@@ -656,7 +657,8 @@ def report_section():
                 if include_company:
                     status.write("Analyzing company overview...")
                     context = vs.query_collection(
-                        "Extract company information, business model, and recent strategic moves"
+                        "Extract company information, business model, and recent strategic moves",
+                        score_threshold=0.8
                     )
                     content = engine.generate_section_content("company_overview", context)
                     if content and len(content.strip()) > 50:
@@ -668,7 +670,8 @@ def report_section():
                 if include_offerings:
                     status.write("Analyzing core offerings...")
                     context = vs.query_collection(
-                        "Extract information about products, services, platforms, and recent launches or changes"
+                        "Extract information about products, services, platforms, and recent launches or changes",
+                        score_threshold=0.8
                     )
                     content = engine.generate_section_content("core_offerings", context)
                     if content and len(content.strip()) > 50:
@@ -680,7 +683,8 @@ def report_section():
                 if include_market:
                     status.write("Analyzing market position...")
                     context = vs.query_collection(
-                        "Analyze market position, competitors, differentiators, and market trends"
+                        "Analyze market position, competitors, differentiators, and market trends",
+                        score_threshold=0.8
                     )
                     content = engine.generate_section_content("market_position", context)
                     if content and len(content.strip()) > 50:
@@ -692,7 +696,8 @@ def report_section():
                 if include_insights:
                     status.write("Generating strategic insights...")
                     context = vs.query_collection(
-                        "Generate strategic insights, implications, and recommendations"
+                        "Generate strategic insights, implications, and recommendations",
+                        score_threshold=0.8
                     )
                     content = engine.generate_section_content("strategic_insights", context)
                     if content and len(content.strip()) > 50:

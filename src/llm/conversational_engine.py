@@ -303,62 +303,62 @@ class ConversationalEngine:
         return self.intent_to_rag_strategy.get(intent, RAGStrategy.PRECISE)
     
     def apply_rag_strategy(self, vectorstore, query: str, intent: ConversationIntent, 
-                         rag_strategy: RAGStrategy) -> List[str]:
-        """Apply the appropriate RAG strategy to retrieve context."""
+                         rag_strategy: RAGStrategy, score_threshold: float = 0.8) -> List[str]:
+        """Apply the appropriate RAG strategy to retrieve high-quality context."""
         
         try:
             if rag_strategy == RAGStrategy.PRECISE:
                 # Focused retrieval with fewer, highly relevant chunks
-                context = vectorstore.query_collection(query, k=4)
+                context = vectorstore.query_collection(query, k=4, score_threshold=score_threshold)
                 
             elif rag_strategy == RAGStrategy.BROAD:
                 # Comprehensive retrieval with more chunks
-                context = vectorstore.query_collection(query, k=8)
+                context = vectorstore.query_collection(query, k=8, score_threshold=score_threshold)
                 
             elif rag_strategy == RAGStrategy.ENSEMBLE:
                 # Combine multiple retrieval approaches
                 # Primary query
-                primary_context = vectorstore.query_collection(query, k=5)
+                primary_context = vectorstore.query_collection(query, k=5, score_threshold=score_threshold)
                 # Related terms query
                 expanded_query = f"{query} analysis insights strategic implications"
-                secondary_context = vectorstore.query_collection(expanded_query, k=3)
+                secondary_context = vectorstore.query_collection(expanded_query, k=3, score_threshold=score_threshold)
                 context = primary_context + secondary_context
                 
             elif rag_strategy == RAGStrategy.FILTERED:
                 # Filter context based on intent-specific keywords
                 filter_keywords = self._get_filter_keywords(intent)
                 filtered_query = f"{query} {' '.join(filter_keywords)}"
-                context = vectorstore.query_collection(filtered_query, k=6)
+                context = vectorstore.query_collection(filtered_query, k=6, score_threshold=score_threshold)
                 
             elif rag_strategy == RAGStrategy.COMPARATIVE:
                 # Retrieve context for comparison
-                context = vectorstore.query_collection(query, k=6)
+                context = vectorstore.query_collection(query, k=6, score_threshold=score_threshold)
                 # Add comparative terms
                 comparative_query = f"{query} compare comparison versus differences"
-                comparative_context = vectorstore.query_collection(comparative_query, k=3)
+                comparative_context = vectorstore.query_collection(comparative_query, k=3, score_threshold=score_threshold)
                 context.extend(comparative_context)
                 
             elif rag_strategy == RAGStrategy.STRUCTURED:
                 # Organize context by categories
-                context = vectorstore.query_collection(query, k=6)
+                context = vectorstore.query_collection(query, k=6, score_threshold=score_threshold)
                 # Could add categorization logic here in future
                 
             elif rag_strategy == RAGStrategy.TEMPORAL:
                 # Time-aware retrieval (enhance with temporal keywords)
                 temporal_query = f"{query} trends changes over time period timeline"
-                context = vectorstore.query_collection(temporal_query, k=6)
+                context = vectorstore.query_collection(temporal_query, k=6, score_threshold=score_threshold)
                 
             elif rag_strategy == RAGStrategy.DIVERSE:
                 # Diverse perspective retrieval
-                base_context = vectorstore.query_collection(query, k=4)
+                base_context = vectorstore.query_collection(query, k=4, score_threshold=score_threshold)
                 # Add alternative perspective queries
                 alt_query = f"{query} alternative perspective different angle"
-                alt_context = vectorstore.query_collection(alt_query, k=3)
+                alt_context = vectorstore.query_collection(alt_query, k=3, score_threshold=score_threshold)
                 context = base_context + alt_context
                 
             else:
                 # Default to precise strategy
-                context = vectorstore.query_collection(query, k=5)
+                context = vectorstore.query_collection(query, k=5, score_threshold=score_threshold)
             
             # Remove duplicates while preserving order
             seen = set()
@@ -372,8 +372,9 @@ class ConversationalEngine:
             
         except Exception as e:
             logger.error(f"RAG strategy {rag_strategy} failed: {str(e)}")
-            # Fallback to simple retrieval
-            return vectorstore.query_collection(query, k=5)
+            # Fallback to simple retrieval with lower threshold
+            logger.info("🔄 Falling back to lower score threshold (0.6)")
+            return vectorstore.query_collection(query, k=5, score_threshold=0.6)
     
     def _get_filter_keywords(self, intent: ConversationIntent) -> List[str]:
         """Get filter keywords based on intent."""
@@ -482,7 +483,8 @@ class ConversationalEngine:
         return "\n".join(formatted)
     
     def generate_response(self, query: str, vectorstore, 
-                         progress_callback: Optional[Callable[[str], None]] = None) -> Tuple[str, ConversationIntent]:
+                         progress_callback: Optional[Callable[[str], None]] = None,
+                         score_threshold: float = 0.8) -> Tuple[str, ConversationIntent]:
         """
         Generate enhanced conversational response with adaptive RAG strategies.
         
@@ -490,6 +492,7 @@ class ConversationalEngine:
             query: User's message
             vectorstore: Vector store for RAG context retrieval
             progress_callback: Progress update function
+            score_threshold: Minimum similarity score for retrieved documents
             
         Returns:
             Tuple of (response, detected_intent)
@@ -510,7 +513,7 @@ class ConversationalEngine:
             if progress_callback:
                 progress_callback(f"🔍 Gathering context using {rag_strategy.value} retrieval...")
             
-            context = self.apply_rag_strategy(vectorstore, query, intent, rag_strategy)
+            context = self.apply_rag_strategy(vectorstore, query, intent, rag_strategy, score_threshold=score_threshold)
             
             # Generate conversational response
             if progress_callback:
